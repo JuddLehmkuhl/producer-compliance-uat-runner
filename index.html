@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Producer Compliance — UAT Runner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================ TOKENS */
+:root{
+  --ink:#101826; --ink-2:#1b2738; --ink-soft:#33415a;
+  --paper:#eef1f5; --panel:#ffffff; --panel-2:#f7f8fb;
+  --line:#e2e6ee; --line-strong:#cdd4e0;
+  --muted:#5c6678; --muted-2:#8a93a6;
+  --primary:#3a3fd4; --primary-press:#2d31b0; --primary-soft:#ecedfb;
+  --green:#15803d; --green-bg:#e7f4ec; --green-dot:#1f9d55;
+  --amber:#b4690e; --amber-bg:#fbf0db; --amber-dot:#e08a14;
+  --red:#b91c1c; --red-bg:#fbe9e9; --red-dot:#dc2626;
+  --focus:#3a3fd4;
+  --shadow-sm:0 1px 2px rgba(16,24,38,.06),0 1px 3px rgba(16,24,38,.04);
+  --shadow-md:0 6px 20px -6px rgba(16,24,38,.18),0 2px 6px rgba(16,24,38,.06);
+  --radius:14px; --radius-sm:9px;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --display:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,-apple-system,sans-serif;
+  --rail:296px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--body); color:var(--ink); background:var(--paper);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--primary)}
+:focus-visible{outline:2.5px solid var(--focus); outline-offset:2px; border-radius:6px}
+button{font-family:inherit}
+::selection{background:#d9dbfa}
+
+/* ============================================================ APP FRAME */
+.app{display:grid; grid-template-columns:var(--rail) 1fr; min-height:100vh}
+
+/* ------------------------------------------------ TOP BAR */
+.topbar{
+  grid-column:1/-1; position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:18px;
+  height:60px; padding:0 22px;
+  background:var(--ink); color:#fff; border-bottom:1px solid #000;
+}
+.brand{display:flex; align-items:center; gap:11px; font-family:var(--display); font-weight:700; letter-spacing:-.01em}
+.brand .mark{
+  width:26px; height:26px; border-radius:7px; flex:none; position:relative;
+  background:conic-gradient(from -90deg,var(--red-dot) 0 33%,var(--amber-dot) 33% 66%,var(--green-dot) 66% 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.14);
+}
+.brand .mark::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--ink)}
+.brand b{font-size:15.5px}
+.brand span{font-weight:500;color:#9aa4bd;font-family:var(--body);font-size:12.5px}
+.topbar .spacer{flex:1}
+/* readiness pill (signature) */
+.verdict{
+  display:flex; align-items:center; gap:10px; padding:6px 13px 6px 8px;
+  border-radius:999px; background:#1d293f; border:1px solid #2c3a55;
+  font-size:12.5px; color:#cbd3e3; font-weight:500;
+}
+.verdict .ring{width:30px;height:30px;flex:none}
+.verdict b{font-family:var(--mono);font-weight:600;color:#fff;font-size:13px}
+.verdict .lbl{color:#9aa4bd}
+.tb-btn{
+  display:inline-flex;align-items:center;gap:7px; height:34px; padding:0 14px;
+  border-radius:9px; border:1px solid #2c3a55; background:#1d293f; color:#e7ebf3;
+  font-size:13px; font-weight:500; cursor:pointer; transition:background .15s,border-color .15s;
+}
+.tb-btn:hover{background:#26344e;border-color:#3a4a6a}
+.tb-btn.primary{background:var(--primary);border-color:var(--primary)}
+.tb-btn.primary:hover{background:var(--primary-press)}
+.tb-btn svg{width:15px;height:15px}
+
+/* ------------------------------------------------ SIDEBAR */
+.rail{
+  position:sticky; top:60px; align-self:start; height:calc(100vh - 60px);
+  overflow-y:auto; background:var(--panel); border-right:1px solid var(--line);
+  padding:18px 14px 40px;
+}
+.rail-progress{
+  background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:15px 15px 13px; margin-bottom:16px;
+}
+.rail-progress .rp-top{display:flex;align-items:center;gap:13px}
+.rail-progress .ring{width:52px;height:52px;flex:none}
+.rail-progress .rp-meta{min-width:0}
+.rail-progress .rp-pct{font-family:var(--display);font-weight:700;font-size:20px;line-height:1}
+.rail-progress .rp-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.rail-progress .rp-bar{height:6px;border-radius:99px;background:var(--line);margin-top:13px;overflow:hidden}
+.rail-progress .rp-fill{height:100%;width:0;border-radius:99px;background:var(--red-dot);transition:width .5s cubic-bezier(.4,0,.2,1),background .5s}
+
+.nav-label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);padding:6px 10px 8px}
+.nav-item{
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  padding:9px 11px; border-radius:10px; border:1px solid transparent; background:none;
+  cursor:pointer; color:var(--ink-soft); font-size:13.5px; font-weight:500; margin-bottom:2px;
+  transition:background .12s,border-color .12s;
+}
+.nav-item:hover{background:var(--panel-2)}
+.nav-item.active{background:var(--primary-soft);border-color:#d4d6f7;color:var(--ink)}
+.nav-item .ni-id{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--muted);min-width:30px}
+.nav-item.active .ni-id{color:var(--primary)}
+.nav-item .ni-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-item .ni-status{width:18px;height:18px;flex:none;display:grid;place-items:center}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+.dot.prog{background:var(--primary)}
+.dot.pass{background:var(--green-dot)}
+.dot.partial{background:var(--amber-dot)}
+.dot.fail{background:var(--red-dot)}
+.ni-check{width:17px;height:17px;color:var(--green)}
+.nav-sep{height:1px;background:var(--line);margin:12px 6px}
+
+/* ------------------------------------------------ MAIN */
+.main{min-width:0;padding:30px clamp(20px,4vw,56px) 90px;max-width:1000px}
+.view{animation:rise .35s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.eyebrow{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--primary)}
+h1.title{font-family:var(--display);font-weight:700;font-size:clamp(26px,4vw,38px);line-height:1.08;letter-spacing:-.02em;margin:10px 0 0}
+.lede{font-size:17px;color:var(--ink-soft);margin:16px 0 0;max-width:64ch}
+
+/* HOME */
+.home-hero{
+  position:relative; overflow:hidden; border-radius:20px; padding:34px 34px 30px;
+  background:linear-gradient(135deg,#141d31,#1f2c49 60%,#243457);
+  color:#eef1f7; box-shadow:var(--shadow-md);
+}
+.home-hero .eyebrow{color:#b9c0fb}
+.home-hero h1.title{color:#fff}
+.home-hero .lede{color:#c4ccdb}
+.home-hero .rag-strip{display:flex;gap:8px;margin-top:22px}
+.rag-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:99px;font-size:12.5px;font-weight:500;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
+.rag-chip i{width:9px;height:9px;border-radius:50%;flex:none}
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+@media(max-width:760px){.home-grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow-sm)}
+.card h3{font-family:var(--display);font-weight:600;font-size:16px;margin:0 0 8px;letter-spacing:-.01em}
+.card p{margin:0;color:var(--ink-soft);font-size:14px}
+.card.warn{background:var(--amber-bg);border-color:#f0dcae}
+.card.warn h3{color:var(--amber)}
+.card ul{margin:8px 0 0;padding-left:18px;color:var(--ink-soft);font-size:14px}
+.card ul li{margin:4px 0}
+.mono-tag{font-family:var(--mono);font-size:.9em;background:#eef0f4;padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+
+details.gloss{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
+details.gloss>summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:var(--display);font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px}
+details.gloss>summary::-webkit-details-marker{display:none}
+details.gloss>summary .chev{margin-left:auto;transition:transform .2s;color:var(--muted)}
+details.gloss[open]>summary .chev{transform:rotate(90deg)}
+.gloss-body{padding:4px 20px 18px;display:grid;grid-template-columns:1fr 1fr;gap:2px 26px}
+@media(max-width:680px){.gloss-body{grid-template-columns:1fr}}
+.gloss-body dl{margin:0;display:contents}
+.gterm{padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.gterm b{color:var(--ink);font-weight:600}
+.gterm span{color:var(--muted)}
+
+.start-row{margin-top:24px;display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:9px;height:46px;padding:0 22px;border-radius:11px;border:1px solid var(--line-strong);background:var(--panel);color:var(--ink);font-size:14.5px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .12s,box-shadow .12s,background .12s}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-press)}
+.btn svg{width:17px;height:17px}
+
+/* TEST HEADER */
+.test-head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.id-chip{font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;background:var(--ink);padding:7px 12px;border-radius:9px;flex:none;margin-top:6px}
+.test-meta{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+.pill svg{width:14px;height:14px;opacity:.8}
+.pill.tier{color:var(--primary);border-color:#d4d6f7;background:var(--primary-soft)}
+
+.callout{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+@media(max-width:720px){.callout{grid-template-columns:1fr}}
+.callout .co{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:var(--radius-sm);padding:14px 16px}
+.callout .co.why{border-left-color:var(--amber-dot)}
+.callout .co .k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+.callout .co p{margin:5px 0 0;font-size:14px;color:var(--ink-soft)}
+
+details.prereq{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel-2)}
+details.prereq>summary{cursor:pointer;list-style:none;padding:13px 17px;font-weight:600;font-size:13.5px;color:var(--ink-soft);display:flex;align-items:center;gap:9px}
+details.prereq>summary::-webkit-details-marker{display:none}
+details.prereq .chev{transition:transform .2s;color:var(--muted)}
+details.prereq[open] .chev{transform:rotate(90deg)}
+details.prereq ul{margin:0;padding:2px 20px 16px 38px}
+details.prereq li{margin:6px 0;font-size:13.5px;color:var(--ink-soft)}
+
+/* PART HEADER */
+.part-head{display:flex;align-items:center;gap:12px;margin:30px 0 6px}
+.part-head .bar{height:1px;flex:1;background:var(--line)}
+.part-head .lbl{font-family:var(--display);font-weight:600;font-size:13.5px;color:var(--ink-2);letter-spacing:-.01em}
+.part-head .opt{font-size:11px;font-weight:600;color:var(--amber);background:var(--amber-bg);border:1px solid #f0dcae;padding:2px 8px;border-radius:99px}
+
+/* STEPS */
+.steps{margin-top:18px;display:flex;flex-direction:column;gap:11px}
+.step{
+  display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:15px 17px;box-shadow:var(--shadow-sm);transition:border-color .15s,background .25s;
+}
+.step.done{background:var(--green-bg);border-color:#c4e3cf}
+.step .check{
+  appearance:none;-webkit-appearance:none;flex:none;width:24px;height:24px;margin-top:1px;
+  border:2px solid var(--line-strong);border-radius:7px;background:#fff;cursor:pointer;position:relative;transition:.15s;
+}
+.step .check:hover{border-color:var(--primary)}
+.step .check:checked{background:var(--green-dot);border-color:var(--green-dot)}
+.step .check:checked::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.step .body{min-width:0}
+.step .s-idx{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--muted-2)}
+.step.done .s-idx{color:var(--green)}
+.step .opt-tag{font-size:10.5px;font-weight:600;color:var(--amber);background:var(--amber-bg);border:1px solid #f0dcae;padding:1px 7px;border-radius:99px;margin-left:8px;vertical-align:1px}
+.step .action{margin:3px 0 0;font-size:14.5px;color:var(--ink);font-weight:500}
+.step .action q{quotes:none}
+.step .expect{margin:11px 0 0;padding:10px 13px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;font-size:13.5px;color:var(--ink-soft)}
+.step .expect .ek{display:block;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-2);margin-bottom:3px}
+.step.done .expect{background:rgba(255,255,255,.6);border-color:#cfe6d7}
+.uilabel{font-family:var(--mono);font-size:.88em;font-weight:600;color:var(--ink);background:#eef0f6;padding:1px 6px;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+.codeblock{position:relative;margin:11px 0 0}
+.codeblock pre{margin:0;padding:13px 15px;background:var(--ink);color:#e7ecf5;border-radius:9px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+.codeblock .copy{position:absolute;top:8px;right:8px;height:27px;padding:0 10px;border-radius:7px;border:1px solid #33415a;background:#1d293f;color:#cbd3e3;font-size:11.5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.codeblock .copy:hover{background:#26344e}
+
+/* RESULT + NOTES */
+.section-h{font-family:var(--display);font-weight:600;font-size:15px;margin:30px 0 12px;display:flex;align-items:center;gap:9px;letter-spacing:-.01em}
+.section-h .n{font-family:var(--mono);font-size:12px;color:var(--muted-2);font-weight:600}
+.resultcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm)}
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px}
+.seg button{border:none;background:none;cursor:pointer;padding:8px 16px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:8px;transition:.12s}
+.seg button .d{width:9px;height:9px;border-radius:50%;background:var(--line-strong)}
+.seg button:hover{color:var(--ink)}
+.seg button[data-v="pass"].on{background:var(--green-bg);color:var(--green)}
+.seg button[data-v="pass"].on .d{background:var(--green-dot)}
+.seg button[data-v="partial"].on{background:var(--amber-bg);color:var(--amber)}
+.seg button[data-v="partial"].on .d{background:var(--amber-dot)}
+.seg button[data-v="fail"].on{background:var(--red-bg);color:var(--red)}
+.seg button[data-v="fail"].on .d{background:var(--red-dot)}
+.field-lbl{font-size:13px;font-weight:600;color:var(--ink-soft);margin:0 0 7px}
+textarea,.txtin{width:100%;font-family:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;resize:vertical;transition:border-color .15s}
+textarea:focus,.txtin:focus{border-color:var(--primary);outline:none}
+textarea{min-height:74px;line-height:1.5}
+
+/* FEEDBACK */
+.fb{display:flex;flex-direction:column;gap:18px}
+.fb-item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px 19px;box-shadow:var(--shadow-sm)}
+.fb-q{font-size:14.5px;font-weight:500;color:var(--ink);margin:0 0 4px}
+.fb-q .qn{font-family:var(--mono);font-weight:600;color:var(--primary);margin-right:7px}
+.fb-scale{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+.rating{display:inline-flex;gap:7px}
+.rating button{width:42px;height:42px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);font-family:var(--mono);font-weight:600;font-size:15px;color:var(--muted);cursor:pointer;transition:.12s}
+.rating button:hover{border-color:var(--primary);color:var(--primary)}
+.rating button.on{background:var(--primary);border-color:var(--primary);color:#fff;transform:scale(1.04)}
+.yesno{display:inline-flex;gap:9px;margin-bottom:11px}
+.yesno button{padding:9px 20px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.12s}
+.yesno button:hover{border-color:var(--primary);color:var(--ink)}
+.yesno button.on[data-v="yes"]{background:var(--green-bg);border-color:var(--green-dot);color:var(--green)}
+.yesno button.on[data-v="no"]{background:var(--red-bg);border-color:var(--red-dot);color:var(--red)}
+
+/* NAV FOOTER */
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:38px;padding-top:22px;border-top:1px solid var(--line)}
+.pager .btn{height:50px}
+.pager .btn .sub{display:block;font-size:11px;font-weight:500;color:var(--muted);text-align:left}
+.pager .btn.next{margin-left:auto;text-align:right}
+.pager .btn.next .sub{text-align:right}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:11px;font-size:13.5px;font-weight:500;box-shadow:var(--shadow-md);opacity:0;pointer-events:none;transition:.3s;z-index:80;display:flex;align-items:center;gap:9px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:16px;height:16px;color:var(--green-dot)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(16,24,38,.5);backdrop-filter:blur(2px);display:none;place-items:center;z-index:90;padding:20px}
+.modal-bg.show{display:grid}
+.modal{background:var(--panel);border-radius:18px;box-shadow:var(--shadow-md);max-width:720px;width:100%;max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
+.modal header{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.modal header h3{font-family:var(--display);font-weight:600;margin:0;font-size:18px;flex:1}
+.modal .close{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel);cursor:pointer;display:grid;place-items:center;color:var(--muted)}
+.modal .close:hover{background:var(--panel-2)}
+.modal .mbody{padding:18px 24px;overflow:auto}
+.modal .mbody p{margin:0 0 14px;color:var(--ink-soft);font-size:14px}
+.modal pre.report{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:var(--mono);font-size:11.5px;line-height:1.55;max-height:38vh;overflow:auto;white-space:pre-wrap}
+.modal footer{padding:16px 24px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+/* MOBILE */
+.menu-btn{display:none}
+@media(max-width:880px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;top:60px;left:0;bottom:0;width:300px;z-index:50;transform:translateX(-103%);transition:transform .25s;box-shadow:var(--shadow-md)}
+  .rail.open{transform:none}
+  .menu-btn{display:inline-flex}
+  .main{padding:22px 18px 80px}
+  .verdict .lbl{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="tb-btn menu-btn" id="menuBtn" aria-label="Toggle navigation" style="padding:0 10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="brand"><span class="mark"></span><div><b>Producer Compliance</b> <span>UAT Runner</span></div></div>
+    <div class="spacer"></div>
+    <div class="verdict" id="verdict" title="Overall progress">
+      <svg class="ring" id="vRing" viewBox="0 0 36 36"></svg>
+      <div><b id="vPct">0%</b> <span class="lbl" id="vLbl">not started</span></div>
+    </div>
+    <button class="tb-btn" id="exportBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Export results</button>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside class="rail" id="rail">
+    <div class="rail-progress">
+      <div class="rp-top">
+        <svg class="ring" id="railRing" viewBox="0 0 36 36"></svg>
+        <div class="rp-meta">
+          <div class="rp-pct" id="railPct">0%</div>
+          <div class="rp-sub" id="railSub">0 of 0 steps cleared</div>
+        </div>
+      </div>
+      <div class="rp-bar"><div class="rp-fill" id="railFill"></div></div>
+    </div>
+    <div class="nav-label">Overview</div>
+    <button class="nav-item" data-nav="home"><span class="ni-id">★</span><span class="ni-title">Start here</span><span class="ni-status"></span></button>
+    <div class="nav-sep"></div>
+    <div class="nav-label">Test cases</div>
+    <div id="navTests"></div>
+    <div class="nav-sep"></div>
+    <button class="nav-item" data-nav="wrap"><span class="ni-id">∑</span><span class="ni-title">Wrap-up</span><span class="ni-status"></span></button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main"><div id="view" class="view"></div></main>
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg><span id="toastMsg">Saved</span></div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <header>
+      <h3>Your results</h3>
+      <button class="close" id="modalClose" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </header>
+    <div class="mbody">
+      <p>A full report of every step you cleared, your Pass/Partial/Fail per test, and all your written feedback. Download it or copy it to send to the team.</p>
+      <pre class="report" id="reportText"></pre>
+    </div>
+    <footer>
+      <button class="btn" id="copyReport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Copy</button>
+      <button class="btn" id="dlJson">Download .json</button>
+      <button class="btn primary" id="dlMd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Download .md</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ DATA ============ -->
+<script id="intro-data" type="application/json">
+{
+  "title":"Producer Compliance — UAT Runner",
+  "subtitle":"A guided, self-saving walkthrough of the producer-compliance feature in the PSA-Agent practice org. Work top to bottom, check off each step, set a verdict, and leave feedback. Everything saves to this browser automatically.",
+  "what":"This app helps an insurance agency stay compliant. It answers two questions: <b>can this producer sell in this state right now?</b> (a Red / Amber / Green readiness verdict) and <b>can this surplus-lines placement be filed?</b> (a 3-gate “Fileable” verdict). Around that sit the safety rails: maker/checker sign-off, a tamper-proof audit, a nightly sweep, and AI copilots.",
+  "access":"You're testing solo with <b>both</b> the Maker and Checker roles plus Agent Admin, and the org has <span class='mono-tag'>Demo Self-Approval</span> ON — so you draft, approve, and file everything yourself. One test (TC7) briefly turns that switch off to prove the separation-of-duties block, then back on.",
+  "glossary":[
+    ["Producer","A licensed insurance salesperson."],
+    ["NPN","National Producer Number — a producer's license ID."],
+    ["Appointment","A carrier authorizing a producer to sell its policies in a state."],
+    ["LOA","Line of Authority — a category of insurance (Life, Property…)."],
+    ["Admitted carrier","A state-licensed, regulated insurer."],
+    ["Surplus lines / E&S","Non-admitted insurers for hard-to-place risks."],
+    ["Diligent search","Documented proof admitted carriers were tried first."],
+    ["Affidavit","A signed sworn statement (here, of the diligent search)."],
+    ["Stamping office","The state body that records surplus-lines filings."],
+    ["E&O","Errors & Omissions — a producer's malpractice cover."]
+  ],
+  "wrap":[
+    {"kind":"rating","question":"Overall, how confident are you this feature works as described and is demo-ready?","scale":"1 = real concerns, 5 = fully confident"},
+    {"kind":"text","question":"Biggest friction — the single most confusing or slow moment across all tests?","scale":""},
+    {"kind":"text","question":"Anything missing or wrong — something you expected to see, or that felt off even when a step technically passed?","scale":""},
+    {"kind":"text","question":"Would you trust this to gate a real state filing? Why or why not?","scale":""},
+    {"kind":"text","question":"One thing you'd change before the next round of testing?","scale":""}
+  ]
+}
+</script>
+
+<script id="test-data" type="application/json">
+[
+  {
+    "id": "TC1",
+    "title": "Is the app installed and can you get around in it?",
+    "estMin": 10,
+    "tier": "Core",
+    "whatChecking": "You are confirming that the Producer Compliance app is installed, that you can open it, click through every tab without errors, and that the org is running in safe practice mode (no real filings will be sent). This is the gentle warm-up before the real tests begin.",
+    "whyMatters": "If the app is not installed correctly or the org is accidentally set to live mode, nothing else in the test plan will work safely. This test proves the foundation is solid before you build on it.",
+    "prereqs": [],
+    "steps": [
+      {
+        "action": "Open the App Launcher (the grid of nine dots at the top-left). In the search box, type \"Producer Compliance\". Click the result called \"Producer Compliance\" to open the app.",
+        "expect": "The app opens. A navigation bar of tabs appears across the top. You land on \"Start Here\". Near the top you see \"Producer Compliance\" above a larger heading \"Start here\", followed by the description: \"Your front door to the app -- organized by the work you do, in the order you do it.\"",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "On the \"Start Here\" tab, look at the groups of cards displayed on the page. Verify these group headings appear in this order: \"Onboard\", \"Verify & License\", \"Appoint\", \"Place E&S business\", \"Approve & File\", \"Monitor\", \"Documents\", and \"Govern & Admin\".",
+        "expect": "All eight group headings appear. Each group contains at least one card. Some cards show a small colored number badge (a \"count badge\") next to their title. Cards with no data show no badge, and that is fine. You see \"Govern & Admin\" because your account has admin-level access.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "In the navigation bar, click through each of these tabs one at a time and confirm each one loads without an error: \"Solution Overview\", \"Producers\", \"Placements\", \"Approval Queue\", \"Compliance Dashboard\", \"Agent HUD\", \"Officer Worklists\", \"Compliance Sweeps\", \"Filing References\", \"Bulk Import Producers\", and \"Control Panel\". If some tabs are not visible, click the \"More\" dropdown at the right end of the navigation bar to find hidden ones.",
+        "expect": "All eleven tabs load without a blank white screen or an \"Insufficient Privileges\" error. Quick guide: \"Solution Overview\" shows architecture overview and docs links. \"Producers\" and \"Placements\" show list views (may be empty). \"Approval Queue\" shows a filterable table of items awaiting review. \"Compliance Dashboard\" shows a card titled \"Producer Compliance Dashboard\" with four colored summary tiles and chart areas. \"Agent HUD\" shows a mission-timeline operator console. \"Officer Worklists\" shows an Exception Console card. \"Compliance Sweeps\" shows a list view of sweep records. \"Filing References\" shows a list view of reference data rows. \"Bulk Import Producers\" shows an import card with an Agency picker and a text area for NPNs. \"Control Panel\" shows configuration settings and environment toggles.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Compliance Dashboard\" tab. Look at the four headline tiles across the top of the dashboard.",
+        "expect": "Four tiles appear: \"Producers\" (with subtitle \"in the book\"), \"Ready to Sell\" (green-tinted, with a percentage subtitle), \"Pending Appointments\" (amber-tinted, with subtitle \"awaiting state response\"), and \"Open Alerts\" (red-tinted, with subtitle \"need attention\"). Each tile shows a number (it may be 0). Below the tiles you should see a health-status line and chart areas.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Control Panel\" tab. Find the card labeled \"Effective State\" near the top and read the value next to \"Live filing\". Then scroll down until you find the toggle labeled \"Live NIPR Mode (vs Demo/Mock)\" and check whether it is ON or OFF.",
+        "expect": "The \"Effective State\" card shows \"Live filing\" as either \"ON\" or \"OFF\" with an icon. The toggle labeled \"Live NIPR Mode (vs Demo/Mock)\" should be OFF, confirming the org is in safe practice mode. STOP here if the toggle is ON -- do not continue testing. Tell Judd immediately.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Still on the \"Control Panel\" tab, scroll further down until you see a card labeled \"Integration & Environment (read-only)\". Read the four fields: \"NIPR environment\", \"Customer Id\", \"Beta sentinel set\", and \"Payment configured\".",
+        "expect": "All four fields appear. \"NIPR environment\" shows a value (e.g. \"Beta\" or may be blank). \"Customer Id\" shows a masked value or blank. \"Beta sentinel set\" shows \"Yes\" or \"No\". \"Payment configured\" shows \"Yes\" or \"No\". A footnote reads: \"Environment and Customer Id are managed via the production-cutover runbook, not from this panel.\" Just read and note what you see.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Confirm your access is already set up. Your user account already has both the \"Producer Compliance -- Maker\" and \"Producer Compliance -- Checker\" permission set groups assigned, so you have full access to everything. No permission-assignment step needed.",
+        "expect": "You already have full access. No action required.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "(OPTIONAL) This step would test that a user WITHOUT compliance permissions sees blank fields on producer records, confirming field-level security (FLS) is working. Since you already have full access, you cannot test this from your own login. Skip and note \"skipped -- requires a no-access login\".",
+        "expect": "Step skipped. If FLS testing is needed, it can be done from a different user account.",
+        "part": "",
+        "code": "",
+        "optional": true
+      },
+      {
+        "action": "Click the \"Producers\" tab. If the list has at least one row, click on any producer name to open that producer's record page. On the record page, look for a card titled \"NIPR Producer Verification\" in the main content area.",
+        "expect": "The record page loads with a custom layout. The \"NIPR Producer Verification\" card is visible with: a colored readiness badge showing one of \"Ready to Sell\" (green), \"Registry-Clear -- Not Yet Appointed\" (amber), \"Not Ready -- Licensing Issue\" (red), or \"Not Verified\" (gray); a line of detail text explaining the status; a \"Verify with NIPR\" button in the card header. If previously verified, you also see counts for Licenses, LOAs, and Regulatory Actions, plus a \"Last verified\" timestamp. If the producer list is empty, note \"no demo data -- skipped steps 9 and 10\" and jump to step 11.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Still on the same producer record page from the previous step, look at the sidebar (the narrower right-hand column). Check for these five components: \"NIPR Eligibility (NPN-keyed)\" with a \"Check Eligibility\" button, \"Draft a State Filing (Maker)\" with a \"Draft (Requested)\" button, \"NIPR Appointments\" (a table of appointment data), \"Document Requests\" with a \"Send request\" button, and \"Audit / Attestation Snapshot\" with a \"Generate snapshot\" button.",
+        "expect": "All five sidebar components are visible and each shows its card title and action button. Some may show empty states (no data rows) on a fresh org -- that is fine. The key thing is that they load without errors and the buttons are present.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Approval Queue\" tab and confirm it loads.",
+        "expect": "The queue loads and shows a row of filter controls for \"Awaiting\", \"Status\", \"State\", and \"Type\". Because you have both Maker and Checker access, you will see action buttons (like \"Approve\"), row checkboxes, and a three-dot menu icon on queue items. The queue may have no rows yet -- just confirm the tab loads and the filter controls appear.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Start Here\" tab. Find the \"Producers\" card under the \"Onboard\" group heading and click on it.",
+        "expect": "Clicking the \"Producers\" card navigates you to the producers list view. This confirms that the \"Start Here\" launchpad links are working and route to the right places.",
+        "part": "",
+        "code": "",
+        "optional": false
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "rating",
+        "question": "On the \"Start Here\" tab, did all the group headings (\"Onboard\", \"Verify & License\", \"Appoint\", \"Place E&S business\", \"Approve & File\", \"Monitor\", \"Documents\", \"Govern & Admin\") appear with their cards and count badges? Rate your confidence that the launchpad accurately reflects the current state of the org's data.",
+        "scale": "1 = badges seemed wrong or missing, 5 = every badge matched what you found when you clicked through"
+      },
+      {
+        "kind": "yesno",
+        "question": "On the \"Control Panel\" tab, was the \"Live NIPR Mode (vs Demo/Mock)\" toggle clearly set to OFF, giving you confidence that this org will not make real NIPR calls during testing? If No, explain what you saw."
+      },
+      {
+        "kind": "text",
+        "question": "What was the most confusing or friction-filled moment during this test? Name the specific screen, label, or step where you hesitated."
+      }
+    ]
+  },
+  {
+    "id": "TC2",
+    "title": "Import Producers, Check Their Readiness, and File an Appointment",
+    "estMin": 14,
+    "tier": "Core",
+    "whatChecking": "This is the main happy-path test. You will bulk-import producers by NPN, confirm that re-importing does not create duplicates, verify a producer against NIPR, read a plain-English explanation of what is blocking them, draft an appointment filing, approve it yourself, submit it, and confirm the producer's status flips to green.",
+    "whyMatters": "If a producer sells insurance without a valid appointment, the carrier can void the policy and the agency faces regulatory penalties. This workflow is the primary control that prevents that.",
+    "prereqs": [
+      "The org should be in DEMO mode. Click the \"Control Panel\" tab. Confirm \"Live NIPR Mode (vs Demo/Mock)\" is toggled OFF. Confirm \"Live NIPR Filing\" is toggled ON. The \"Effective State\" card's \"Live filing\" row should show ON.",
+      "On the same \"Control Panel\" page, confirm \"Demo Self-Approval (Mock Mode Only)\" is toggled ON.",
+      "At least one Agency (Account) record should already exist. If none exist, use the App Launcher to open \"Accounts\", click \"New\", enter any agency name, and click \"Save\".",
+      "You need at least 2 NPNs to import. In demo mode, any 7-digit numbers work (e.g. 7001234 and 7005678).",
+      "At least one carrier should be seeded so the \"Carrier\" dropdown has an option when you draft a filing. If empty at step 7, choose \"Other (enter manually)...\" and type any carrier name and code (e.g. name: \"Test Carrier\", code: \"12345\").",
+      "At least one state should be configured so the \"State\" dropdown has an option (e.g. VA). If no states appear at step 7, ask Judd to load reference data."
+    ],
+    "steps": [
+      {
+        "action": "Open the Producer Compliance app. Click the \"Bulk Import Producers\" tab in the top navigation bar.",
+        "expect": "A card titled \"Bulk Import Producers\" with subtitle \"Load producers into an agency's book by NPN\". Below the subtitle: an \"Agency (Account)\" picker, an \"NPNs\" text area, and a grayed-out \"Import roster\" button. A \"Clear\" button is next to it.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click inside the \"Agency (Account)\" picker and start typing the name of an agency. Select it from the dropdown. In the \"NPNs\" text area, type at least 2 NPNs, each on its own line (e.g. 7001234, Enter, 7005678). The \"Import roster\" button should turn blue. Click \"Import roster\".",
+        "expect": "A brief spinner appears. A success toast titled \"Roster import\" appears. A shaded result box shows counts: \"Created: N\", \"Matched: N\", \"New affiliations: N\", \"Skipped: N\" -- Created is at least 1 and New affiliations is at least 1. Below the counts: \"New producers import as 'Not yet verified' -- re-verify them against NIPR to baseline their readiness.\"",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Without clearing the form, click \"Import roster\" again with the same NPNs and agency still selected.",
+        "expect": "The toast appears again, but this time \"Created\" shows 0 and \"Matched\" shows the number of producers you already imported. \"New affiliations\" shows 0. This proves the system does not create duplicates on re-import.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click the \"Producers\" tab in the top navigation bar. In the list view, find one of the producers you just imported and click their name to open their record.",
+        "expect": "The producer's record page loads. A card titled \"NIPR Producer Verification\" shows a badge reading \"Not Verified\" and the text \"Click 'Verify with NIPR' to pull live PDB data.\" No license or LOA counts are shown yet.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "In the \"NIPR Producer Verification\" card, click the \"Verify with NIPR\" button.",
+        "expect": "A spinner appears inside the card. A success toast titled \"Verified\" appears with message \"Producer verified against the NIPR PDB.\" The badge changes from \"Not Verified\" to one of: Green \"Ready to Sell\", Amber \"Registry-Clear -- Not Yet Appointed\", or Red \"Not Ready -- Licensing Issue\". Counts for Licenses, LOAs, and Regulatory Actions appear, along with a \"Last verified\" timestamp.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Read the detail text below the badge. You need to find a producer with an Amber badge for the rest of this test. If this producer is Amber (\"Registry-Clear -- Not Yet Appointed\"), note the detail text -- it should name specific states. If Green, go back to the \"Producers\" tab, open a different imported producer, click \"Verify with NIPR\", and look for one that lands on Amber.",
+        "expect": "The detail text for an Amber producer reads something like \"Registry-clear (licensed) in: VA, MD\" followed by a note about needing appointments. It names the specific blocker. Note which producer is Amber and what the detail text says.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "On the Amber producer's record page, find the card titled \"Draft a State Filing (Maker)\" in the right-hand column. Set \"Type\" to \"Appointment\". Select a State from the \"State\" dropdown (pick a state from the Amber detail text, e.g. VA). Select a Carrier from the \"Carrier\" dropdown (pick the first available; if empty, choose \"Other (enter manually)...\" and type any name/code). Select a Line of Authority from the dropdown. Click the blue \"Draft (Requested)\" button.",
+        "expect": "A success toast titled \"Drafted\" appears with message like \"Appointment drafted as Requested in VA -- a checker must approve and submit it.\" Below the button, a note confirms: \"Drafts as Requested. A checker approves and submits it to NIPR -- drafting never files.\"",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click the \"Approval Queue\" tab in the top navigation bar. Find the appointment you just drafted in the table.",
+        "expect": "A card titled \"Checker Approval Queue\" loads. Your drafted appointment appears with columns: Type (\"Appointment\"), Producer (name), NPN, State, Status (\"Requested\"), Awaiting (\"Approve\"), and Submitted (date). A checkbox column appears on the far left, an \"Approve selected\" button above the table, and a three-dot menu on the right side of the row.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click the three-dot menu on the right side of your appointment row. In the menu that appears, click \"Approve\".",
+        "expect": "A success toast titled \"Success\" with message \"Approved by checker.\" The row's \"Awaiting\" column changes from \"Approve\" to \"Submit\". The three-dot menu now shows \"Submit to NIPR\" instead of \"Approve\".",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click the three-dot menu again on the same row. Click \"Submit to NIPR\".",
+        "expect": "A success toast titled \"Success\" with message \"Submitted to NIPR Gateway.\" In demo mode, processing is instant: the row either disappears from the queue or its status updates. No error toast should appear.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click the \"Producers\" tab. Open the same producer whose appointment you just submitted. Scroll to the right-hand column and look at the \"NIPR Appointments\" card and the \"NIPR Producer Verification\" badge.",
+        "expect": "In the \"NIPR Appointments\" card, your appointment row appears with an active status. The \"NIPR Conf\" column displays a value starting with \"MOCK-\" (e.g. \"MOCK-CUST_TRANS-...\"), confirming demo mode processed the filing. The \"NIPR Producer Verification\" badge should now show \"Ready to Sell\" (green) instead of \"Registry-Clear -- Not Yet Appointed\" (amber). If the badge has not updated, click \"Verify with NIPR\" to force a refresh and note that you had to do this.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "(Skip if the Compliance Team Copilot agent is not set up.) Look for an Einstein icon in the utility bar or page header. Click it to open the Agentforce chat panel. Type: \"Verify producer [name or NPN]\" and press Enter. Then type: \"Draft an appointment for [producer name] in [state] with [carrier]\".",
+        "expect": "The copilot responds with the producer's current readiness status using live record data. For the draft request, it creates a \"Requested\" appointment (visible in the Approval Queue) but does NOT file or approve it -- it only drafts. If the copilot is not available, write \"SKIPPED -- Compliance Team Copilot not deployed in this org\" in your notes.",
+        "part": "",
+        "optional": true,
+        "code": ""
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "rating",
+        "question": "When you imported the NPNs and then re-imported the same NPNs, did the result box clearly show that no duplicates were created (\"Created: 0\", \"Matched: N\")? Rate how confident you are that you could explain this dedup behavior to someone else based on what the screen showed.",
+        "scale": "1 = not at all confident, 5 = completely clear"
+      },
+      {
+        "kind": "text",
+        "question": "On the Amber producer's record, did the detail text below the badge explain in plain language WHY the producer was not yet ready to sell (e.g. naming the missing appointment or listing specific states)? Write down what it said.",
+        "scale": ""
+      },
+      {
+        "kind": "rating",
+        "question": "When you looked at the \"Approval Queue\", did the queue clearly show which item was waiting for your action and what you needed to do next (e.g. showing the \"Awaiting\" column as \"Approve\" and providing the three-dot menu)? Rate how obvious the next step was.",
+        "scale": "1 = had to guess, 5 = immediately obvious"
+      },
+      {
+        "kind": "text",
+        "question": "After you submitted the appointment and it went active with a \"MOCK-\" confirmation number, did the producer's readiness badge change from Amber (\"Registry-Clear -- Not Yet Appointed\") to Green (\"Ready to Sell\")? If you had to click \"Verify with NIPR\" to refresh the badge, note that here.",
+        "scale": ""
+      },
+      {
+        "kind": "text",
+        "question": "What was the most confusing or friction-filled moment in this test? Name the specific screen, button, or transition where you hesitated or were unsure what to do next.",
+        "scale": ""
+      }
+    ]
+  },
+  {
+    "id": "TC3",
+    "title": "Surplus-Lines Placement -- Walk Through All Three Filing Gates",
+    "estMin": 15,
+    "tier": "Core",
+    "whatChecking": "You will create a surplus-lines placement -- a record that represents placing insurance through a non-admitted (surplus lines / E&S) carrier. Then you will walk the placement through the three compliance gates the system requires before it can be officially filed with the state: (1) Carrier Eligibility -- verify the carrier is allowed to write surplus-lines business in that state, (2) Diligent Search -- document that you tried admitted carriers first and they all declined, then sign the affidavit, (3) SL Filing -- draft, approve, and submit the tax and stamping filing to the state stamping office. Along the way, a \"Fileability\" card on the record will climb from 0 of 3 gates cleared to 3 of 3 cleared, ending with a green \"Fileable\" badge.",
+    "whyMatters": "If any of these gates is skipped or done out of order in real life, the agency faces regulatory fines, voided policies, and clawed-back commissions. This test proves every gate works and blocks progress until its requirements are met.",
+    "prereqs": [
+      "You should already be logged in to the Producer Compliance app. If not, click the \"App Launcher\" (the waffle/grid icon at the top-left) and type \"Producer Compliance\" into the search box, then click the app name.",
+      "You need at least one producer record (an \"OB_Producer__c\" record) in the system. Write down the producer's name so you can find it later.",
+      "You need at least one carrier record (an \"OB_Carrier__c\" record) that represents a non-admitted (surplus-lines) carrier. Write down its name for later.",
+      "The org should already be in Demo/Mock mode, meaning no real filings will be sent to any state agency.",
+      "The Florida (FL) tax preview in steps 15-16 may show a real computed dollar amount OR $0.00 with a red warning -- both are valid depending on what demo data has been loaded. Either is fine for this test.",
+      "If Florida has a \"Diligent Search Threshold\" configured (typically 3), you will need to log that many declinations. If no threshold is configured, logging at least one declination is enough."
+    ],
+    "steps": [
+      {
+        "action": "Click the \"Producers\" tab across the top of the app. In the list that appears, find and click the name of your producer. If you do not see \"Producers\" in the visible tabs, click \"More\" at the far right of the tab row to reveal additional tabs.",
+        "expect": "The producer's detail page loads. Near the top of the page, in the row of action buttons, you should see one labeled \"New E&S Placement\".",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"New E&S Placement\" button.",
+        "expect": "A modal opens with two columns of fields. Left side: \"Insured Name\", \"Home State (NRRA)\", \"Carrier\" (a lookup field), \"Gross Premium\", \"Effective Date\". Right side: \"Agency Account\", \"Policy Number\", \"Coverage Type\", \"Expiration Date\".",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Fill in the form with these values, then click \"Save\": Insured Name = \"Acme Widgets LLC\", Home State (NRRA) = \"FL\", Carrier = search for and select your non-admitted carrier, Gross Premium = \"100000\", Effective Date = today's date, Coverage Type = \"General Liability\". Leave all other fields blank.",
+        "expect": "A green success toast appears. The new placement record page opens. The \"Status\" field in the detail section shows \"Draft\".",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Look at the top of the main content area for the card titled \"Fileability\".",
+        "expect": "A red \"Blocked\" badge with an error icon. A progress bar reading \"0 of 3 cleared\". Three lines listed in order, each with a warning icon: (1) Carrier Eligibility, (2) Diligent Search, (3) SL Filing. A \"Next action(s)\" box at the bottom naming all three blockers.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Scroll down to the card titled \"Carrier Eligibility (Surplus Lines)\". Note the status badge and the \"Re-verify eligibility\" button.",
+        "expect": "The card shows a status badge -- likely \"Unverified\" in a yellow/warning style. The \"Re-verify eligibility\" button is visible and clickable.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click \"Re-verify eligibility\".",
+        "expect": "A brief spinner, then a success toast saying \"Status: Eligible\". The badge changes to a green \"Eligible\" badge with a checkmark icon. (If it says \"Ineligible\" with a red badge, the demo data may need adjusting -- note it down, or try a different carrier if available.)",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Scroll back up to the \"Fileability\" card and click the \"Refresh\" button inside that card.",
+        "expect": "The progress bar updates to \"1 of 3 cleared\". The Carrier Eligibility line now has a green check icon. The other two lines still show warning icons. The badge still reads \"Blocked\". The \"Next action(s)\" box now lists only two remaining blockers (Diligent Search and SL Filing).",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Scroll down to the card titled \"Diligent Search & Affidavit (Surplus Lines)\". Read the message shown.",
+        "expect": "The card displays a message like: \"No diligent search on file for this placement. A surplus-lines placement requires a documented search of admitted carriers before binding.\" A blue \"Start Diligent Search\" button is visible.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click \"Start Diligent Search\".",
+        "expect": "A success toast: \"Diligent search started.\" The card now shows: a status badge (\"Not Generated\" with a warning style), a threshold meter (e.g. \"0 of 3 required declinations\" if FL threshold is 3), and a \"Log a declination\" form with fields: \"Admitted carrier\", \"NAIC CoCode\", \"Declined date\", \"Contact method\" (dropdown defaulting to \"Email\"), and \"Reason\".",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Check the \"Generate Affidavit\" button -- it should currently be grayed out (disabled). Hover your mouse over it.",
+        "expect": "The button is grayed out and not clickable. Its tooltip reads: \"Meet the diligent-search threshold before generating the affidavit.\" This confirms the system blocks affidavit generation until enough declinations are logged.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Log declinations one at a time until the threshold meter is full. For each one, fill in the form fields and click \"Add declination\": (1) State Farm / CoCode 25178 / today / Email / Risk outside appetite, (2) Allstate / CoCode 19232 / today / Email / Risk outside appetite, (3) Liberty Mutual / CoCode 23043 / today / Email / Risk outside appetite. If the threshold is not 3, keep adding declinations with made-up carrier names until the meter reaches 100%.",
+        "expect": "After each: a success toast (\"Declination logged.\"), a new row in the declination table, and the threshold meter updates (e.g. \"1 of 3\", \"2 of 3\", \"3 of 3 required declinations\"). Once the threshold is met, the meter bar fills completely.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Confirm the \"Generate Affidavit\" button is no longer grayed out. Click it.",
+        "expect": "A success toast: \"Affidavit generated -- awaiting checker sign-off.\" The status badge changes to \"Generated\" with a clock icon. A \"View generated affidavit\" link appears below the badge.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "You should see a blue \"Sign Affidavit\" button and a red-text \"Reject\" button on the card (visible because Demo Self-Approval is on). Click \"Sign Affidavit\".",
+        "expect": "A success toast: \"Affidavit signed. Diligent search complete.\" The status badge changes to \"Signed\" (green with a checkmark). A line shows \"Signed by\" followed by your display name. A \"View signed affidavit\" link is visible. The Sign and Reject buttons disappear. If the system labels this as a \"demo self-approval (maker = checker)\", that is expected.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Scroll up to the \"Fileability\" card and click \"Refresh\".",
+        "expect": "The progress bar updates to \"2 of 3 cleared\". Two lines now have green check icons (Carrier Eligibility and Diligent Search). Only \"SL Filing\" still shows a warning icon. The badge still reads \"Blocked\". The \"Next action(s)\" box shows one remaining blocker for the SL filing.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Scroll down to the card titled \"Surplus-Lines Tax & Stamping Filing\".",
+        "expect": "A \"Tax preview -- FL\" box showing one of two valid states: (a) If a tax rate IS configured for FL: Taxable premium ($100,000.00), Tax rate (e.g. 1.75%), Surplus-lines tax (e.g. $1,750.00), Stamping fee (e.g. $35.00), with a gray note about PLACEHOLDER config. (b) If NO tax rate is configured: Tax rate 0%, Surplus-lines tax $0.00 in gray, with a red note about no rate configured. Either way, an NRRA explanatory note and a blue \"Draft FL filing\" button should be visible.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click \"Draft FL filing\".",
+        "expect": "A success toast: \"Filing drafted for FL.\" A filing card appears inside the workbench showing a \"Draft\" status badge (yellow/warning style), the state \"FL\", the tax amount, and the stamping office name.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "You should see a blue \"Approve\" button and a red-text \"Reject\" button on the filing card (Demo Self-Approval allows you to approve your own draft). Click \"Approve\".",
+        "expect": "A success toast: \"Filing approved.\" The filing status badge changes to \"Checker Approved\". The \"Approve\" button disappears. New buttons appear: \"Submit to stamping office\" (blue), \"Manual confirm\" (neutral), and \"Reject\" (red text). If the system labels this as a \"demo self-approval (maker = checker)\", that is expected.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click \"Submit to stamping office\".",
+        "expect": "A success toast: \"Filing submitted to the stamping office.\" The filing status badge changes to \"Filed\" (green). A \"MOCK\" badge appears next to the status (with a warning icon and the text \"MOCK\") -- expected in demo mode. A \"Confirmation #\" field appears showing a value starting with \"MOCK-\" in fixed-width font. A \"Stamping transactions\" table appears below showing at least one row with the Customer Txn # and Confirmation # in fixed-width font.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Scroll to the very top of the page. In the \"Fileability\" card, click \"Refresh\".",
+        "expect": "The badge now shows a GREEN \"Fileable\" badge with a checkmark icon. The progress bar reads \"3 of 3 cleared\". All three lines have green check icons: Carrier Eligibility, Diligent Search, and SL Filing. The \"Next action(s)\" blocker box is GONE -- no blockers remain.",
+        "code": "",
+        "part": "",
+        "optional": false
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "rating",
+        "question": "When the placement first loaded (step 4), did the \"Fileability\" card's \"Next action(s)\" box name each of the three specific blockers (Carrier Eligibility, Diligent Search, SL Filing) in plain language? Rate your confidence that someone new to this system could understand what to do next just from reading that text.",
+        "scale": "1 = confusing, 5 = immediately clear"
+      },
+      {
+        "kind": "text",
+        "question": "In the \"Diligent Search\" card, was the \"Generate Affidavit\" button visibly grayed out when the declination count was below the threshold, and did it become clickable exactly when the threshold was met -- without you needing to refresh the page?"
+      },
+      {
+        "kind": "text",
+        "question": "With Demo Self-Approval turned on, were you able to draft, sign the affidavit, approve the filing, and submit it all yourself without any errors or blocks? Did the system label any of these as a \"demo self-approval\"? Describe what you saw."
+      },
+      {
+        "kind": "text",
+        "question": "Describe any point in the walkthrough where you were confused about what to do next, had to wait unexpectedly, encountered a toast error, or found the label on a button or badge unclear. If everything was smooth, say so."
+      }
+    ]
+  },
+  {
+    "id": "TC4",
+    "title": "Surplus-Lines Readiness in an Appointment-Exempt State",
+    "estMin": 8,
+    "tier": "Core",
+    "whatChecking": "When a producer holds a surplus-lines license in a state that is marked \"appointment-exempt,\" the system should show a GREEN \"Ready to Sell\" badge even though the producer has no carrier appointment. Meanwhile, the same kind of producer in a normal (admitted) state should still show an AMBER badge saying an appointment is required.",
+    "whyMatters": "Surplus-lines carriers (non-admitted/E&S carriers) do not formally appoint producers. If the system wrongly demanded an appointment in a state where one is never issued, it would block legitimate business. At the same time, admitted carriers DO require appointments, so skipping that check would be a dangerous compliance gap. The exemption is controlled by a data record on the \"Filing References\" tab, not by any code change -- proving the system's \"config-as-data\" design works.",
+    "prereqs": [
+      "The org is in Demo/Mock mode. Open the Producer Compliance app, click the \"Control Panel\" tab, and confirm \"Live NIPR Mode\" is toggled OFF in the \"Effective State\" card.",
+      "A producer record exists with: (a) an active surplus-lines license (License Class = \"Surplus Lines\", License Class Code = \"SL\") in a test state such as FL, (b) at least one active LOA under that license, (c) an active E&O policy, and (d) NO carrier appointment in that state. Write down the producer's name.",
+      "That same producer (or a different one) also has an active admitted-market license in a DIFFERENT state (e.g. MD), with active E&O but NO carrier appointment and NO \"Appointment Exemption\" reference row for that second state.",
+      "On the \"Filing References\" tab, a record exists with Reference Type = \"Appointment Exemption\", State = the exempt test state (e.g. \"FL\"), License Class Code = \"SL\", and the \"Active\" checkbox checked.",
+      "The second test state (e.g. MD) must NOT have an Appointment Exemption row.",
+      "If the Appointment Exemption reference row cannot be created, SKIP this entire test and note the reason: \"No Appointment Exemption reference row seeded for the test state.\""
+    ],
+    "steps": [
+      {
+        "action": "Click the \"Filing References\" tab. When the list loads, click the list-view dropdown and select \"All References\" if not already selected. Filter by \"Reference Type\" = \"Appointment Exemption\". Find the row for your exempt test state (e.g. FL).",
+        "expect": "At least one row with Reference Type = \"Appointment Exemption (no carrier appointment required)\", State = your test state (e.g. FL), License Class Code = \"SL\", and the \"Active\" checkbox checked. If you do not see this row, ask Judd to create it or skip this test and note why.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "While still on the \"Filing References\" list, scan or filter the list to confirm there is NO \"Appointment Exemption\" row for the second (admitted) test state (e.g. MD). Adjust the column filter to also filter by State, or scroll through the filtered results.",
+        "expect": "No Appointment Exemption row appears for the admitted test state. This confirms the two states have different exemption settings.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Producers\" tab. Find the surplus-lines producer (the one with an SL license in the exempt state, active E&O, and no carrier appointment). Use the search bar to type the producer's name. Click the producer's name to open their record page.",
+        "expect": "The producer's record page loads. In the main content area, a card called \"NIPR Producer Verification\" appears with a colored status badge and a \"Verify with NIPR\" button.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Verify with NIPR\" button inside the \"NIPR Producer Verification\" card. Wait for the spinning indicator to finish and a toast message to appear.",
+        "expect": "A green success toast reading \"Verified -- Producer verified against the NIPR PDB.\" The card refreshes with updated counts (Licenses, LOAs, Regulatory Actions) and a \"Last verified\" timestamp.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Read the colored status badge and the detail text below it in the \"NIPR Producer Verification\" card.",
+        "expect": "The badge is GREEN and reads \"Ready to Sell\". The detail text reads something like: \"Ready to Sell -- surplus-lines authority requires no carrier appointment; licensed with active E&O in: [your exempt state].\" There should be NO mention of \"appointment required\", \"pending appointment\", or \"not yet appointed\" anywhere in the detail. Copy or screenshot the exact text.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "On the same producer record page, look at the sidebar (right-hand column). Find the card called \"NIPR Appointments\". Check whether any appointments are listed for the exempt state.",
+        "expect": "Either the appointments list is empty for that state, or no appointment exists for the exempt state. This confirms the producer reached GREEN without a carrier appointment -- the exemption is working correctly.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Producers\" tab again. Find and click the name of the producer who holds an admitted-market license in the non-exempt state (e.g. MD), with active E&O and no carrier appointment. Once their record page loads, click the \"Verify with NIPR\" button in the \"NIPR Producer Verification\" card and wait for the verification to complete.",
+        "expect": "The verification completes with a green success toast. The card refreshes with updated data.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Read the colored status badge and the detail text in the \"NIPR Producer Verification\" card for the admitted-line state.",
+        "expect": "The badge is AMBER and reads \"Registry-Clear -- Not Yet Appointed\". The detail text reads something like: \"Registry-clear (licensed) in: [admitted state]. Not yet Ready to Sell -- a carrier appointment is required.\" The text explicitly names appointment as the gap. This proves the admitted line is unaffected by the exemption configuration.",
+        "part": "",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Go back to the \"Filing References\" tab. Find and click the name/link of the Appointment Exemption row for the exempt state to open its record detail page. Look at its fields: \"Reference Type\", \"State\", \"License Class Code\", \"Label\", \"Active\".",
+        "expect": "The record detail page shows a normal, editable Salesforce record. Adding the same exemption to a new state would be as simple as clicking \"New\" on the Filing References list and creating a new record with the same Reference Type and a different State value. No code change, no deployment, and no developer is needed -- just a new data record.",
+        "part": "",
+        "code": "",
+        "optional": false
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "text",
+        "question": "When the surplus-lines producer showed GREEN in the \"NIPR Producer Verification\" card (step 5), did the detail text explicitly say \"surplus-lines authority requires no carrier appointment\"? Please copy and paste the exact text you saw.",
+        "scale": ""
+      },
+      {
+        "kind": "yesno",
+        "question": "In the admitted-line state (step 8), did the AMBER badge detail text say \"a carrier appointment is required\"? Was there any confusing reference to surplus-lines or exemptions in that message?",
+        "scale": ""
+      },
+      {
+        "kind": "rating",
+        "question": "How confident are you that you could explain to a colleague where the appointment-exemption configuration lives (the \"Filing References\" tab) and how adding a new state would work, based on what you saw in steps 1 and 9?",
+        "scale": "1 = not at all confident, 5 = completely confident"
+      },
+      {
+        "kind": "text",
+        "question": "Was there anything in this test that was confusing, required extra clicks to find, or where the on-screen text did not clearly explain why the producer was GREEN versus AMBER?",
+        "scale": ""
+      }
+    ]
+  },
+  {
+    "id": "TC6",
+    "title": "Checking the Overnight Compliance Scan Results",
+    "estMin": 15,
+    "tier": "Core",
+    "whatChecking": "After the system runs its automatic nightly scan (the \"compliance sweep\" batch job that checks every producer's licensing, insurance, and training status), the results should show up on three screens: (1) the \"Compliance Dashboard\" with number tiles and charts, (2) the \"Officer Worklists\" page with a prioritized to-do list called the \"Exception Console,\" and (3) the \"Agent HUD\" (heads-up display) with a 48-hour timeline showing what the system did overnight. You will walk through each screen and confirm the data looks right.",
+    "whyMatters": "If the nightly scan fails silently or its results do not appear on these monitoring screens, nobody gets early warning about expiring licenses, missing E&O insurance (Errors & Omissions -- malpractice insurance protecting a producer against claims of professional negligence), or incomplete diligent searches (documented proof the agency tried standard carriers before going to a surplus-lines carrier). Problems would only surface after a sale is voided or a regulator finds them.",
+    "prereqs": [
+      "The nightly scan must have run at some point today. If unsure, trigger it yourself: open Developer Console (gear icon > \"Developer Console\"), click Debug > \"Open Execute Anonymous Window\", paste the batch line, click \"Execute\", wait ~2 minutes, then confirm completion in Setup > Apex Jobs (look for OB_ComplianceSweepBatch with Status \"Completed\")."
+    ],
+    "steps": [
+      {
+        "action": "Open the \"Producer Compliance\" app (App Launcher > search \"Producer Compliance\"). Click the \"Compliance Sweeps\" tab (check \"More\" dropdown if not visible). On the list page, click the topmost record (sorted newest-first by default; click the \"Run At\" column header to sort by date if needed).",
+        "expect": "The record detail page shows today's date/time in the \"Run At\" field, a non-zero number in \"Producers Scanned,\" and a \"Summary\" paragraph beginning with \"Daily compliance sweep complete\" stating how many producers were scanned. If any producer fell out of ready-to-sell status, \"Newly At Risk\" shows 1 or more and the summary names them. \"Open Critical\" shows a count of open Critical-severity alerts across the whole book of business.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Start Here\" tab (first tab on the left). Scroll down or look for the group of cards labeled \"Monitor.\" Note the count badges on the \"Open critical alerts\" card and the \"Agency snapshot\" card.",
+        "expect": "The \"Monitor\" group contains cards linking to monitoring tools. The \"Open critical alerts\" card shows a count badge styled in a red/urgent color if Critical alerts exist. The number should match or exceed the \"Open Critical\" value from the sweep record in step 1. Other cards in this group include \"Agent HUD\" and \"Agency snapshot.\"",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Compliance Dashboard\" tab (or click the \"Open critical alerts\" card from step 2). Read the four number tiles at the top: \"Producers\" (how many in the book), \"Ready to Sell\" (fully compliant count and percentage), \"Pending Appointments\" (carrier appointments awaiting state response), and \"Open Alerts\" (compliance issues needing attention).",
+        "expect": "All four tiles display numeric values (not blank, not zero for \"Producers\"). The \"Producers\" count should match or exceed the \"Producers Scanned\" number from the sweep record in step 1. \"Open Alerts\" shows a non-zero count if any open alerts exist. \"Ready to Sell\" shows both a count and a percentage (e.g., \"12\" with \"80%\" below it).",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Still on the Compliance Dashboard, scroll down to the charts section. Find the \"Producer Readiness\" doughnut chart and confirm it shows colored segments. Then find the \"Open Alerts by Severity\" chart and the \"Open Alerts by Category\" chart.",
+        "expect": "The \"Producer Readiness\" doughnut chart has colored segments with a caption: Green = Ready to Sell, Amber = licensed but not appointed or has an E&O gap, Red = blocking issue or unlicensed. The \"Open Alerts by Severity\" chart shows a red \"Critical\" segment if any Critical alerts exist. The \"Open Alerts by Category\" chart shows category labels such as \"License,\" \"E&O,\" \"Diligent Search,\" or \"CE\" (Continuing Education).",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "On the Compliance Dashboard, find the \"State\" filter dropdown near the top-right (text reads \"Showing:\" followed by the current selection in bold, defaulting to \"all states\"). Click the dropdown and select a specific state with producers in the demo data. Watch the charts and tiles update. Then switch back to \"All states\" by selecting the first option.",
+        "expect": "The \"Showing:\" label updates to the state abbreviation you picked (e.g., \"Showing: MD\"). All seven charts (\"Producer Readiness,\" \"Continuing Education,\" \"Open Alerts by Severity,\" \"Open Alerts by Category,\" \"Appointments by Status,\" \"Appointments by State,\" \"License Applications by Status\") and the four number tiles re-render to show only data for that state -- counts may decrease. When you switch back to \"All states,\" the original numbers return.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Officer Worklists\" tab. Look for a card titled \"Exception Console\" with a case icon. Read the count line at the top and review the rows in the data table below it. Look for a row where \"Type\" is \"Alert\" and \"Severity\" is \"Critical.\" If you cannot find the Exception Console on Officer Worklists or in the \"More\" dropdown, write \"Could not find Exception Console\" and skip to step 9.",
+        "expect": "The count line says something like \"N item(s) needing attention -- Critical first, oldest first.\" The table has columns: \"Severity,\" \"Type,\" \"State,\" \"Item,\" \"Producer,\" \"Age (d),\" and \"Why / suggested action.\" At least one row with Severity = \"Critical\" and Type = \"Alert\" appears near the top (Critical items always sort first). Each row has a small dropdown arrow for the row action menu offering \"Open record.\"",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "In the Exception Console table, find the Critical alert row where the \"Item\" column says \"Diligent Search.\" Read its \"Why / suggested action\" column. If no \"Diligent Search\" row exists, write \"SKIP -- no bound placement without search in demo data\" and move on.",
+        "expect": "The \"Item\" column displays \"Diligent Search.\" The \"Why / suggested action\" column references a specific placement (a bound insurance deal) and says something like \"is BOUND but its diligent search is not complete -- a signed diligent-search affidavit is required to place surplus lines.\" The guidance says to \"Open to review and resolve the issue, then close the alert.\" You can click the dropdown arrow on that row to see the \"Open record\" action.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Still in the Exception Console, find the \"Lane\" filter dropdown above the data table. Click it and select \"Alert\" to narrow to alerts only. Then find the \"State\" filter dropdown (below the Lane filter) and pick a specific state.",
+        "expect": "After selecting \"Alert\" in the Lane filter, the table shows only rows where \"Type\" is \"Alert.\" The count line updates to reflect the smaller number. After applying the State filter, alerts narrow to that state, but alerts with no state value (general alerts like escalations) continue to show -- the console never hides a Critical item behind a state filter.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Click the \"Agent HUD\" tab (check \"More\" dropdown if not visible). Look at the header strip across the top and find three things: (a) the verdict badge -- a colored dot followed by a status label, (b) the \"Autonomy\" chip, and (c) the switch pills showing subsystem statuses.",
+        "expect": "The header strip displays: a verdict badge with a colored status dot and label (e.g., green dot with \"Healthy\" or amber dot with \"Attention needed\"); an Autonomy chip showing \"Supervised\" (default mode -- human reviews before final action); four pills showing subsystem on/off states, each with name, dot, state, and sub-label: \"Agent,\" \"Servicing,\" \"Email,\" and \"Live filing.\"",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "On the Agent HUD, look below the header strip for the \"Agent timeline\" section. Find the time ribbon (horizontal band with time labels and a vertical \"NOW\" line). In the swimlanes below, find the one labeled \"Sweep.\" Look for a filled dot on that lane to the left of the NOW line representing today's scan. Hover over the dot to see a tooltip.",
+        "expect": "The \"Sweep\" swimlane shows at least one filled dot to the left of the NOW line (in the past). Hovering displays a tooltip with three lines: a title (e.g., \"Compliance sweep\"), a detail line (e.g., producers-scanned count), and a timestamp. Hovering over the \"Sweep\" label on the far left shows help text: \"The nightly whole-book compliance rescan. Dot size = producers scanned.\"",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Still on the Agent HUD timeline, find the \"Triage\" swimlane (directly below the \"Sweep\" lane). Look for a marker representing the triage briefing (a second automated job that runs after the sweep generating a morning summary). If no triage dot is visible, write \"No triage marker visible; triage job may not have run\" and continue.",
+        "expect": "If the triage job has run, the \"Triage\" swimlane shows a filled dot with a tooltip referencing the morning briefing. Hovering over the \"Triage\" label shows help text: \"The nightly AI morning briefing.\"",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "On the Agent HUD, click the sweep dot (the filled dot on the \"Sweep\" lane from step 10). This opens the \"detail drawer\" -- a panel below the timeline showing a feed of events. Look for the sweep event in that feed.",
+        "expect": "Clicking the dot opens (or scrolls to) the detail drawer. If closed, a toggle bar below the timeline expands it. The drawer shows feed items, each with an icon, title, detail text, and relative timestamp (e.g., \"2 hours ago\"). The sweep event appears with its title and a detail line referencing sweep results (scanned count, at-risk count). Above the feed: a \"Type\" dropdown, a \"Notable only\" toggle, and a \"Clear timeline selection\" button.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "In the detail drawer feed, look for rows with an expander button (small clickable text like \"why\" or a disclosure arrow). If you see one, click it to open the decision reasoning section. Note: sweep events are system batch jobs, not agent decisions, so there may be no expandable rows -- just note that and continue.",
+        "expect": "Clicking the expander reveals a drill-down section with structured fields: \"Decision,\" \"Outcome,\" \"Model,\" \"Agent.\" Below those, two collapsible sections: \"Show prompt (redacted)\" and \"Show response (redacted).\" Clicking either heading expands it to show monospace redacted text. If no expandable rows exist, that is normal for sweep events.",
+        "code": "",
+        "part": "",
+        "optional": false
+      },
+      {
+        "action": "Navigate back to the \"Compliance Sweeps\" tab and confirm the most recent sweep's \"Open Critical\" count is greater than zero. Then check whether the system also opened a servicing Case for an E&O gap: open App Launcher, search \"Cases,\" click \"Cases.\" Look for a Case where the \"Subject\" contains text like \"E&O attention needed.\" If no E&O-gap demo data has been seeded, write \"SKIP -- no E&O-gap demo data seeded\" and move on.",
+        "expect": "The system uses two separate time-based thresholds: (1) 90-day threshold generates compliance alert records for any license, CE, or E&O expiring within 90 days (the alerts seen on the dashboard and Exception Console); (2) 60-day threshold opens a servicing Case for producers whose E&O is missing or expiring within 60 days AND who have an active agency affiliation, triggering an agency outreach workflow. The two thresholds serve different purposes: 90-day is early warning for internal staff; 60-day triggers external action.",
+        "code": "",
+        "part": "",
+        "optional": false
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "text",
+        "question": "On the Compliance Dashboard, when you changed the State filter, did all seven charts (\"Producer Readiness,\" \"Continuing Education,\" \"Open Alerts by Severity,\" \"Open Alerts by Category,\" \"Appointments by Status,\" \"Appointments by State,\" \"License Applications by Status\") visibly update with new data, or did any chart appear stuck or empty after filtering?",
+        "scale": ""
+      },
+      {
+        "kind": "text",
+        "question": "In the Exception Console, did the Critical diligent-search alert row clearly explain both WHAT is wrong (a bound placement without a completed search) and WHAT TO DO about it (complete the search and have it signed off) -- or was the guidance vague or missing?",
+        "scale": ""
+      },
+      {
+        "kind": "rating",
+        "question": "Rate your confidence that you could use the Agent HUD timeline to figure out what the system did overnight (sweep, triage, alerts, servicing) without needing to ask someone.",
+        "scale": "1 = completely lost, 5 = I could explain it to a colleague"
+      },
+      {
+        "kind": "text",
+        "question": "Was there any point during this test where you expected to see sweep results on a screen but the data was missing, stale, or you had to manually refresh the page to make it appear? Describe what happened and what you did.",
+        "scale": ""
+      }
+    ]
+  },
+  {
+    "id": "TC7",
+    "title": "Safety Guardrails and Tamper-Proof Audit",
+    "estMin": 18,
+    "tier": "Core",
+    "whatChecking": "This is the \"try to break it\" test. You will attempt several things that the system should NOT let you do -- editing locked audit records, approving your own work when the safety switch is on, and submitting filings when the kill-switch is flipped. Every attempt should fail with a clear error message, and that failure IS the success.",
+    "whyMatters": "State insurance regulators require that no single person can push a filing through without a second pair of eyes (separation of duties). They also require that the record of who approved what can never be altered after the fact (tamper-proof audit trail), and that the agency can instantly halt all outbound filings if something goes wrong. If any of these guardrails has a gap, the agency could face fines, voided policies, or loss of its license.",
+    "prereqs": [
+      "You should already have at least one producer record with an active licensed LOA in the system from earlier tests.",
+      "You should have at least one appointment in \"Requested\" status. If not, open any producer record via the \"Producers\" tab, use the \"Draft a State Filing (Maker)\" sidebar card to draft an appointment in any state, and confirm you see the toast \"Appointment drafted as Requested\".",
+      "The \"Control Panel\" tab should show \"Live NIPR Filing\" as ON in the Effective State card. \"Demo Self-Approval\" should currently be ON (you will briefly turn it OFF during Part B, then turn it back on)."
+    ],
+    "steps": [
+      {
+        "action": "Open the Developer Console. Click the gear icon in the top-right corner of any Salesforce page, then choose \"Developer Console\" from the dropdown menu. A new browser window will open.",
+        "expect": "Developer Console window opens with a toolbar across the top.",
+        "part": "Part A — Audit cannot be tampered with",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Try to EDIT an audit record. In the Developer Console, click \"Debug\" > \"Open Execute Anonymous Window\". Paste the code below into the text box, then click \"Execute\".",
+        "expect": "The code FAILS with the error message \"Checker Decisions are append-only and cannot be modified or deleted.\" This failure is the success -- it proves nobody can change an approval decision after the fact. If you have no Checker Decision records yet (error says \"List has no rows for assignment\"), note that and move to Part B; come back after Part B step 5 creates one.",
+        "part": "Part A — Audit cannot be tampered with",
+        "code": "OB_Checker_Decision__c d = [SELECT Id FROM OB_Checker_Decision__c ORDER BY CreatedDate DESC LIMIT 1];\nd.Decision__c = 'Reject';\nupdate d;",
+        "optional": false
+      },
+      {
+        "action": "Try to DELETE an audit record. In the same Execute Anonymous window (click Debug > Open Execute Anonymous Window again if you closed it), clear the previous code, paste the code below, and click \"Execute\".",
+        "expect": "The code FAILS with the same error message: \"Checker Decisions are append-only and cannot be modified or deleted.\" The record still exists. Together with step 2, this proves the audit trail is completely tamper-proof -- records cannot be changed or removed.",
+        "part": "Part A — Audit cannot be tampered with",
+        "code": "OB_Checker_Decision__c d = [SELECT Id FROM OB_Checker_Decision__c ORDER BY CreatedDate DESC LIMIT 1];\ndelete d;",
+        "optional": false
+      },
+      {
+        "action": "Turn \"Demo Self-Approval\" OFF. Click the \"Control Panel\" tab. In the switch cards below the Effective State card, look in the \"Safety\" section for the toggle labeled \"Demo Self-Approval\" and click it to turn it OFF. A reason/confirm panel will slide open -- type something like \"testing the guardrail\" in the text box, then click \"Confirm\".",
+        "expect": "A success toast appears. The Effective State card now reflects that Demo Self-Approval is off.",
+        "part": "Part B — Prove separation of duties (the self-approval block)",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Draft a new appointment. Click the \"Producers\" tab, click on any producer name. In the sidebar, find the \"Draft a State Filing (Maker)\" card. Use the dropdowns to pick any operating state, carrier, and LOA, then click \"Draft (Requested)\".",
+        "expect": "A success toast appears saying \"Appointment drafted as Requested\".",
+        "part": "Part B — Prove separation of duties (the self-approval block)",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Try to approve the filing you just drafted. Click the \"Approval Queue\" tab. Find the appointment you just drafted -- it will show \"Requested\" in the Status column. Click the three-dot action menu at the far right of that row and select \"Approve\".",
+        "expect": "An error toast appears with the message: \"Maker/checker separation: the user who drafted this filing cannot approve it.\" The filing stays in \"Requested\" status. This is the correct behavior -- the system is enforcing that the drafter and approver must be different people.",
+        "part": "Part B — Prove separation of duties (the self-approval block)",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Turn \"Demo Self-Approval\" back ON. Click the \"Control Panel\" tab. In the \"Safety\" switch section, find \"Demo Self-Approval\" and click the toggle to turn it ON. A reason/confirm panel appears -- type something like \"restoring for testing\" in the text box, then click \"Confirm\". IMPORTANT: Make sure \"Demo Self-Approval\" is back ON before continuing. If you leave it off, you will not be able to approve filings in your other tests. Check the Effective State card to be sure.",
+        "expect": "A success toast appears. The Effective State card confirms Demo Self-Approval is on again.",
+        "part": "Part B — Prove separation of duties (the self-approval block)",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Turn \"Live NIPR Filing\" OFF. Click the \"Control Panel\" tab. In the \"Safety\" switch section, find the toggle labeled \"Live NIPR Filing\" and click it to turn it OFF. A reason/confirm panel will slide open -- type something like \"Testing guardrail\" and click \"Confirm\". Check that the Effective State card now shows \"Live filing: OFF\".",
+        "expect": "A success toast appears and the Effective State card reflects the change.",
+        "part": "Part C — Turning live filing OFF blocks submitting",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Try to submit an approved filing. You need a filing in \"Checker Approved\" status. If you already have one from earlier tests, use it. If not, draft and approve one now (Demo Self-Approval is back on from step 7): go to \"Producers\" tab, open a producer, draft an appointment using the \"Draft a State Filing (Maker)\" sidebar card, then go to \"Approval Queue\" tab, find your new filing (Status \"Requested\"), click the three-dot action menu, and select \"Approve\". It should change to Status \"Checker Approved\" with the Awaiting column showing \"Submit\". Now, click the three-dot action menu on that same row again and select \"Submit to NIPR\".",
+        "expect": "An error toast appears with the message: \"Live NIPR filing is disabled (Agent Control -> Live Filing Enabled is off). No state filing was submitted; re-enable it to file.\" The filing stays in \"Checker Approved\" status -- nothing was sent anywhere. This confirms the kill-switch works.",
+        "part": "Part C — Turning live filing OFF blocks submitting",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Turn \"Live NIPR Filing\" back ON. Click the \"Control Panel\" tab and find the \"Live NIPR Filing\" toggle in the \"Safety\" switch section. Click it to turn it back ON. A reason/confirm panel appears -- type something like \"Restoring for testing\" and click \"Confirm\". Verify the Effective State card shows \"Live filing: ON\" again.",
+        "expect": "A success toast appears. The Effective State card confirms \"Live filing: ON\". The system is back to normal.",
+        "part": "Part C — Turning live filing OFF blocks submitting",
+        "code": "",
+        "optional": false
+      },
+      {
+        "action": "Confirm a Maker-only user sees a read-only Approval Queue. You hold both Maker and Checker permissions, so you WILL always see the \"Approve\" buttons, row checkboxes, and action menus on the Approval Queue. A user who holds ONLY the Maker permission should see none of those controls -- the queue should be completely read-only for them. To verify, briefly log in with a user that holds ONLY the \"OB_Compliance_Maker\" permission set and check the Approval Queue. Otherwise, skip and note it as skipped.",
+        "expect": "A Maker-only user sees no action buttons, no row checkboxes, and no \"Approve selected\" button on the Approval Queue -- the queue is completely read-only for them.",
+        "part": "Part D — OPTIONAL: Confirm a Maker-only user sees a read-only Approval Queue",
+        "code": "",
+        "optional": true
+      },
+      {
+        "action": "Turn \"Canary Filing Mode\" ON. Click the \"Control Panel\" tab. In the \"Safety\" switch section, find \"Canary Filing Mode\" and click the toggle to turn it ON. A reason/confirm panel appears -- type a reason and click \"Confirm\".",
+        "expect": "A success toast appears and canary mode is on.",
+        "part": "Part E — OPTIONAL: Canary brake (admin)",
+        "code": "",
+        "optional": true
+      },
+      {
+        "action": "Try to submit a non-canary filing. Have an approved filing ready (Status \"Checker Approved\"), or draft and approve one now. Go to the \"Approval Queue\" tab, find the approved filing, click the three-dot action menu, and select \"Submit to NIPR\". After a few seconds, open the transaction record by going to the producer's record page (\"Producers\" tab > click producer name), scrolling to the \"NIPR Filing History\" card, and clicking the most recent transaction row. Check the \"Status\" and \"Error_Message\" fields.",
+        "expect": "The transaction record shows Status = \"Error\" and the Error_Message field contains: \"Canary filing mode is on -- only a transaction flagged Is_Canary__c may file. This write was skipped; it auto-resumes via OB_GatewayRetryBatch when canary mode is cleared.\"",
+        "part": "Part E — OPTIONAL: Canary brake (admin)",
+        "code": "",
+        "optional": true
+      },
+      {
+        "action": "Turn \"Canary Filing Mode\" back OFF. Click the \"Control Panel\" tab. Find \"Canary Filing Mode\" in the \"Safety\" switch section and click the toggle to turn it OFF. A reason/confirm panel appears -- type a reason and click \"Confirm\". This restores normal operation. If you skip Part E, note: \"Skipped -- canary mode not tested due to time constraints.\"",
+        "expect": "A success toast appears and canary mode is off.",
+        "part": "Part E — OPTIONAL: Canary brake (admin)",
+        "code": "",
+        "optional": true
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "yesno",
+        "question": "When you tried to approve your own drafted filing with \"Demo Self-Approval\" turned OFF (Part B, step 6), did the error toast display the exact phrase \"Maker/checker separation: the user who drafted this filing cannot approve it\"? If No, quote the actual message you saw.",
+        "scale": ""
+      },
+      {
+        "kind": "yesno",
+        "question": "When you attempted to edit and delete the audit record in Developer Console (Part A, steps 2-3), did BOTH operations fail with the message \"Checker Decisions are append-only and cannot be modified or deleted\"? If only one failed, or neither failed, explain which succeeded and what message appeared.",
+        "scale": ""
+      },
+      {
+        "kind": "text",
+        "question": "The read-only Approval Queue check (Part D) needed a Maker-only login. Did you confirm that a Maker-only user sees no action buttons, no row checkboxes, and no \"Approve selected\" button on the queue? Or was it skipped?",
+        "scale": ""
+      },
+      {
+        "kind": "text",
+        "question": "What was the most confusing, slow, or friction-filled moment in this test? Name the specific step number or Part letter and describe what happened.",
+        "scale": ""
+      }
+    ]
+  },
+  {
+    "id": "TC8",
+    "title": "Safety Gates Admin Review (Look but Do Not Touch)",
+    "estMin": 10,
+    "tier": "Role-specific",
+    "whatChecking": "The Producer Compliance app has a \"Control Panel\" where an admin can flip powerful switches -- things like enabling real filings with state regulators, letting the system act on its own, or killing all automated processing. Each switch has safety guardrails designed to prevent someone from accidentally flipping a dangerous switch in a real (production) environment. Your job is to walk through every one of these switches, read their warnings, and confirm the guardrails exist -- then leave every switch exactly as you found it.",
+    "whyMatters": "If any of these safety gates were missing or broken, the system could accidentally send real filings to NIPR (the National Insurance Producer Registry -- the central clearinghouse that state insurance regulators use to process license applications and renewals), which carries financial and legal consequences. These gates are the last line of defense, so we need to verify they work.",
+    "prereqs": [
+      "CRITICAL SAFETY WARNING: This test is about INSPECTING safety switches, NOT activating them. You will open panels, read warning text, and click \"Cancel\" (or immediately undo any change). Do NOT leave any switch in a different position than where it started. At the end, you will confirm every switch is back to its starting position. If anything gets stuck or you are unsure, stop and ask Judd."
+    ],
+    "steps": [
+      {
+        "action": "Open the Producer Compliance app: click the nine-dot grid icon (\"App Launcher\") in the top-left corner of Salesforce, type \"Producer Compliance\" into the search box, and click the \"Producer Compliance\" app result. Once the app loads, click the \"Control Panel\" tab in the horizontal navigation bar. Wait for the page to load fully.",
+        "expect": "The Control Panel loads with four card sections visible: \"Effective State\", one or more switch-category cards labeled \"Safety\" / \"Agent\" / \"Operational\", \"Integration & Environment (read-only)\", and \"Scheduled Jobs (read-only)\". No red error banner appears. The \"Effective State\" card displays: \"Org autonomy: Supervised\", a \"Live filing\" indicator with a check or dash icon, \"Canary mode: OFF\", and \"Paused agencies: 0\". If you do not see the Control Panel at all, or it shows a message like \"The Control Panel is for compliance admins,\" ask Judd to assign the \"OB_Agent_Admin\" permission set to your user.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "In the \"Effective State\" card, read the value next to \"Org autonomy\".",
+        "expect": "The value reads \"Supervised\". This means the system is in its safe default mode -- it will not act on its own without human oversight.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Scroll down to the \"Safety\" switch category. Find the toggle labeled \"Live NIPR Filing\". Click the toggle to flip it (if it is ON, click to turn it OFF, or vice versa). An inline panel should appear below the switch.",
+        "expect": "An inline panel appears with warning text that says something like: \"This change is consequential. A reason is required and will be audited. For Live Filing on a production environment, include ACKNOWLEDGE-PROD to override the brake.\" You will see a \"Reason\" text area, a \"Confirm\" button, and a \"Cancel\" button. \"ACKNOWLEDGE-PROD\" is a specific phrase you would have to type to prove you really mean to enable live filing on a production system -- a deliberate speed bump to prevent accidents.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "In the \"Reason\" text area that appeared in Step 3, type something that does NOT contain the phrase ACKNOWLEDGE-PROD -- for example, type \"testing the gate\". Then click the \"Confirm\" button.",
+        "expect": "One of two outcomes, both correct: (a) An error toast appears saying something like: \"To enable live filing here, turn Canary Mode ON first (files only the watched record), or include ACKNOWLEDGE-PROD in your reason to override.\" The toggle snaps back to where it was -- the production gate caught you. (b) The change goes through without an error, because this practice org (sandbox) knows it is not a production system and the ACKNOWLEDGE-PROD gate only fires on production environments. Write down which outcome you got -- (a) blocked, or (b) allowed.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "If Step 4 allowed the change (the toggle flipped), immediately click the \"Live NIPR Filing\" toggle again to put it back to its original position, type any reason (e.g. \"reverting test\"), and click \"Confirm\" to undo. If Step 4 blocked the change with an error, click \"Cancel\" to close the reason panel. Either way, confirm the toggle is back to where it started.",
+        "expect": "The \"Live NIPR Filing\" toggle is back in its original position. If a flip occurred, a success toast confirms the revert.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Still in the \"Safety\" category, find the \"Live NIPR Filing\" switch again. Look for a small (i) icon near the switch -- it may be labeled \"Explain what happens if I flip this\" or appear as a circled \"i\" next to the switch label. Click that icon.",
+        "expect": "An advisor text box appears below the switch. It describes what would happen if you flipped this switch -- it should mention either enabling or halting live NIPR Gateway WRITE filings, and include a \"Right now:\" line showing the current live state of multiple controls (guardrail, servicing loop, live filing, canary, environment, org autonomy). Read it to confirm it makes sense, then move on.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Scroll to the \"Agent\" switch category. Find the dropdown labeled \"Org Autonomy Level\" (note its current value -- it should say \"Supervised\"). Click the dropdown and select \"Autonomous\" from the list. An inline reason panel should appear.",
+        "expect": "An inline reason/confirm panel appears with the consequential-change warning. The dropdown now shows \"Autonomous\" as the selected value, but the change has NOT been saved yet -- you would have to click \"Confirm\" to commit it. \"Autonomous\" means the system could act entirely on its own without human approval. You are about to cancel this -- do not confirm it.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "IMPORTANT: Click \"Cancel\" on the reason panel that appeared in Step 7. Do NOT confirm the autonomy change.",
+        "expect": "The panel closes and the \"Org Autonomy Level\" dropdown reverts to \"Supervised\". No toast appears (because nothing was saved). The \"Effective State\" card at the top still shows \"Org autonomy: Supervised\".",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Read the help text on the \"Org Autonomy Level\" dropdown by hovering over or clicking the small help icon next to the label.",
+        "expect": "The help text says: \"The org-default autonomy mode. Only the exact value Autonomous enables autonomous filing; anything else resolves to Supervised. Per-agency overrides beat this default.\" This is the case-sensitive whitelist design -- only the exact string \"Autonomous\" (capital A) works. A typo like \"autonomous\" (lowercase) or \"AUTONOMOUS\" (all caps) would resolve to Supervised, so accidents are prevented.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "In the \"Safety\" category, find the \"Agent Master Switch\" toggle. Read its current state (ON or OFF) and its help text (look for an info bubble or small icon next to the label and hover over or click it).",
+        "expect": "The toggle is ON (the shipped default). The help text says: \"Master kill-switch for the autonomous agent. When off, the agent takes no autonomous action at all.\" A kill-switch is a master off switch -- flipping it immediately stops all automated processing, designed for emergencies.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Click the \"Agent Master Switch\" toggle to turn it OFF. This switch does NOT require a reason -- it is designed for emergency use, so it flips immediately.",
+        "expect": "The toggle flips to OFF. A success toast appears confirming the change (something like \"Agent Master Switch is now OFF\"). No reason panel appears -- this is intentional, because in a real emergency you need to shut things down instantly without typing an explanation first.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Click the \"Agent HUD\" tab in the horizontal navigation bar. Look at the header strip at the top of the page -- specifically the pill labeled \"Agent\" and the verdict badge.",
+        "expect": "The \"Agent\" pill shows the state \"OFF\" (the subtitle reads \"OFF\"). The verdict badge shows a warning or attention state (not \"All systems nominal\") with at least 1 item needing attention. This confirms the Agent HUD reflects the kill-switch state in real time.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Click the \"Control Panel\" tab in the horizontal navigation bar to return to the Control Panel. Find the \"Agent Master Switch\" toggle and click it to turn it back ON.",
+        "expect": "The toggle flips to ON. A success toast confirms \"Agent Master Switch is now ON\". The system is restored to its starting state. Note: If you see an interactive copilot (chat helper icon) in the Salesforce header bar, it was never affected by the kill-switch -- it kept working the whole time. The kill-switch only controls the automated servicing pipeline, not the interactive chat helper.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "In the \"Safety\" category, find the toggle labeled \"Servicing Guardrail Enforced\". Read its help text (hover over or click the info icon next to the label) and the \"defaultNote\" text shown below the label.",
+        "expect": "The help text says: \"When ON, the deterministic guardrail OVERRIDES a servicing action that contradicts the record state (to ESCALATE). When OFF, it only logs (shadow mode), building agree-rate evidence.\" The default note says \"OFF (shadow-only) when unconfigured\". In plain English: shadow mode means the guardrail watches and logs what it would have done, but does not actually block anything yet. You run it in shadow mode first to build agree-rate evidence that it is making correct decisions before turning enforcement ON. \"ESCALATE\" means the system flags the item for human review instead of processing automatically.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "In the \"Safety\" category, find the toggle labeled \"Canary Filing Mode\". Read its help text (hover over or click the info icon next to the label).",
+        "expect": "The help text says: \"Production-cutover brake. When ON, only transactions flagged as the canary record can file; every other write is refused and auto-resumes when cleared.\" Canary mode is a production-cutover safety brake. You mark one specific record as the \"canary\" (like a canary in a coal mine). Only that one record can file; everything else is held back, preventing a queue of approved-but-waiting records from all firing at once when the system is first armed for production.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Scroll to the \"Integration & Environment (read-only)\" card. Read all four fields: \"NIPR environment\", \"Customer Id\", \"Beta sentinel set\", and \"Payment configured\".",
+        "expect": "The card shows read-only values: \"NIPR environment\" shows either \"Beta\" or is blank (\"Beta\" means the system is pointed at NIPR's test environment). \"Customer Id\" shows either a masked value or \"(not set)\". \"Beta sentinel set\" shows \"Yes\" or \"No\" (a sentinel is a marker value confirming the system is talking to the test environment). \"Payment configured\" shows \"Yes\" or \"No\" (whether payment credentials for NIPR filing fees have been set up). A note below reads: \"Environment and Customer Id are managed via the production-cutover runbook, not from this panel.\" This confirms these critical values are locked down and require a separate formal process to change.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      },
+      {
+        "action": "Final verification: confirm that the Control Panel is back to its starting state. Check every switch by scrolling through the page: \"Agent Master Switch\" = ON, \"Org Autonomy Level\" = Supervised, \"Live NIPR Filing\" = same as when you started (check your notes from Step 3), \"Canary Filing Mode\" = OFF, \"Servicing Guardrail Enforced\" = same as when you started.",
+        "expect": "All switches are in their original positions. No unintended changes persist from this test. The org remains in its safe default state with Supervised autonomy. Leave the org exactly as you found it.",
+        "code": "",
+        "optional": false,
+        "part": ""
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "text",
+        "question": "When you flipped \"Live NIPR Filing\" and typed a reason WITHOUT \"ACKNOWLEDGE-PROD\" (Step 4), did the system block you with an error mentioning \"ACKNOWLEDGE-PROD\"? (Yes = blocked with error / No = allowed the change because this is a practice/Beta org.) Was the gate's purpose -- preventing accidental live filing on a production system -- clear from the error text or the warning in the reason panel?",
+        "scale": ""
+      },
+      {
+        "kind": "rating",
+        "question": "On the \"Org Autonomy Level\" dropdown, the help text says that only the exact value \"Autonomous\" (capital A) enables autonomous filing, and anything else resolves to \"Supervised\". How confident are you that a typo or a lowercase entry could NOT accidentally enable autonomous filing, based on what you read in the help text and the dropdown design?",
+        "scale": "1 = not confident at all, 5 = fully confident"
+      },
+      {
+        "kind": "text",
+        "question": "When you turned the \"Agent Master Switch\" OFF (Step 11) and checked the \"Agent HUD\" (Step 12), did the \"Agent\" pill show \"OFF\" and did the verdict badge shift to a warning/attention state? (Yes / No -- if No, describe what you saw instead and whether you had to refresh the page.)",
+        "scale": ""
+      },
+      {
+        "kind": "text",
+        "question": "After walking through all the safety gates (ACKNOWLEDGE-PROD typed-phrase requirement, autonomy case-sensitive whitelist, agent kill-switch, shadow-then-go guardrail, canary mode, environment bright-line), was anything unclear, hard to find, or something that would make you hesitate during a real production go-live?",
+        "scale": ""
+      }
+    ]
+  }
+]
+</script>
+
+<script>
+/* ============================================================ APP */
+(function(){
+  "use strict";
+  const INTRO = JSON.parse(document.getElementById('intro-data').textContent);
+  const TESTS = JSON.parse(document.getElementById('test-data').textContent);
+  const KEY = 'pc-uat-runner-v1';
+  const $ = (s,r=document)=>r.querySelector(s);
+  const el = (t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+  const esc = s => String(s==null?'':s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+
+  // load/save state
+  let state = {steps:{},results:{},notes:{},feedback:{}};
+  try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&typeof s==='object') state=Object.assign(state,s);}catch(e){}
+  let saveT;
+  function save(){clearTimeout(saveT); saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} toast('Saved');},250);}
+
+  const totalSteps = TESTS.reduce((n,t)=>n+t.steps.length,0);
+  const stepsDone = ()=>Object.values(state.steps).filter(Boolean).length;
+  const testStepsDone = t => t.steps.filter((_,i)=>state.steps[t.id+'.'+i]).length;
+
+  // render quoted UI labels nicely: wrap "…" in .uilabel
+  function fmt(s){
+    let h = esc(s);
+    h = h.replace(/&quot;([^&]*?)&quot;/g,'<span class="uilabel">$1</span>')
+         .replace(/"([^"]*?)"/g,'<span class="uilabel">$1</span>')
+         .replace(/`([^`]+?)`/g,'<span class="uilabel">$1</span>');
+    return h;
+  }
+
+  /* ---------- progress rings ---------- */
+  function ragColor(p){return p>=100?'var(--green-dot)':p>0?(p>=66?'var(--green-dot)':'var(--amber-dot)'):'var(--red-dot)';}
+  function ring(svg,pct,track,stroke){
+    const r=15.9155, c=2*Math.PI*r, off=c*(1-pct/100);
+    svg.innerHTML=`<circle cx="18" cy="18" r="${r}" fill="none" stroke="${track}" stroke-width="3.4"/>
+      <circle cx="18" cy="18" r="${r}" fill="none" stroke="${stroke}" stroke-width="3.4" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 18 18)"
+      style="transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1),stroke .4s"/>`;
+  }
+  function updateProgress(){
+    const done=stepsDone(), pct=totalSteps?Math.round(done/totalSteps*100):0;
+    const col=pct>=100?'var(--green-dot)':pct>0?'var(--amber-dot)':'var(--red-dot)';
+    ring($('#vRing'),pct,'#2c3a55','#fff');
+    $('#vPct').textContent=pct+'%';
+    $('#vLbl').textContent=pct>=100?'all cleared':pct>0?'in progress':'not started';
+    ring($('#railRing'),pct,'var(--line)',col);
+    $('#railPct').textContent=pct+'%';
+    $('#railSub').textContent=done+' of '+totalSteps+' steps cleared';
+    const f=$('#railFill'); f.style.width=pct+'%'; f.style.background=col;
+  }
+
+  /* ---------- sidebar ---------- */
+  function testStatus(t){
+    const r=state.results[t.id];
+    if(r) return r; // pass/partial/fail
+    const d=testStepsDone(t);
+    if(d===0) return 'none';
+    return d===t.steps.length ? 'doneSteps' : 'prog';
+  }
+  function buildNav(){
+    const wrap=$('#navTests'); wrap.innerHTML='';
+    TESTS.forEach(t=>{
+      const b=el('button','nav-item'); b.dataset.nav=t.id;
+      const st=testStatus(t);
+      let statusEl;
+      if(st==='pass'||st==='partial'||st==='fail') statusEl=`<span class="dot ${st}"></span>`;
+      else if(st==='doneSteps') statusEl=`<svg class="ni-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>`;
+      else if(st==='prog') statusEl=`<span class="dot prog"></span>`;
+      else statusEl=`<span class="dot"></span>`;
+      b.innerHTML=`<span class="ni-id">${t.id}</span><span class="ni-title">${esc(t.title)}</span><span class="ni-status">${statusEl}</span>`;
+      wrap.appendChild(b);
+    });
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.nav===current));
+  }
+
+  /* ---------- views ---------- */
+  let current='home';
+  function go(nav){current=nav; closeRail(); window.scrollTo(0,0); render(); buildNav();}
+
+  function render(){
+    const v=$('#view'); v.classList.remove('view'); void v.offsetWidth; v.classList.add('view');
+    if(current==='home') return renderHome(v);
+    if(current==='wrap') return renderWrap(v);
+    const t=TESTS.find(x=>x.id===current); if(t) renderTest(v,t);
+  }
+
+  function renderHome(v){
+    const g=INTRO.glossary.map(([term,def])=>`<div class="gterm"><b>${esc(term)}</b> — <span>${esc(def)}</span></div>`).join('');
+    v.innerHTML=`
+      <div class="home-hero">
+        <div class="eyebrow">Internal UAT · PSA-Agent practice org</div>
+        <h1 class="title">${esc(INTRO.title)}</h1>
+        <p class="lede">${esc(INTRO.subtitle)}</p>
+        <div class="rag-strip">
+          <span class="rag-chip"><i style="background:var(--red-dot)"></i>Red — not ready</span>
+          <span class="rag-chip"><i style="background:var(--amber-dot)"></i>Amber — in progress</span>
+          <span class="rag-chip"><i style="background:var(--green-dot)"></i>Green — cleared</span>
+        </div>
+      </div>
+      <div class="home-grid">
+        <div class="card"><h3>What you're testing</h3><p>${INTRO.what}</p></div>
+        <div class="card"><h3>Your access (solo)</h3><p>${INTRO.access}</p></div>
+      </div>
+      <div class="home-grid">
+        <div class="card warn"><h3>⚠ Practice environment</h3><p>Nothing here is real. Every check is simulated; confirmation numbers start with <span class="mono-tag">MOCK-</span>. If you ever see a confirmation that doesn't, stop and flag it.</p></div>
+        <div class="card"><h3>How it works</h3><ul><li>Do tests in order — TC1 first.</li><li>Tick each step as you complete it.</li><li>Set a <b>Pass / Partly / Fail</b> verdict per test.</li><li>Answer the feedback — that's the real signal.</li><li>Hit <b>Export results</b> when done.</li></ul></div>
+      </div>
+      <details class="gloss"><summary>Mini-glossary <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary><div class="gloss-body">${g}</div></details>
+      <div class="start-row"><button class="btn primary" id="startBtn">Start TC1 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>`;
+    $('#startBtn').onclick=()=>go(TESTS[0].id);
+  }
+
+  function renderTest(v,t){
+    const idx=TESTS.findIndex(x=>x.id===t.id);
+    const prev=TESTS[idx-1], next=TESTS[idx+1];
+    let stepsHtml='', lastPart=null;
+    t.steps.forEach((s,i)=>{
+      if(s.part && s.part!==lastPart){
+        lastPart=s.part;
+        stepsHtml+=`<div class="part-head"><span class="lbl">${esc(s.part)}</span>${s.optional?'<span class="opt">optional</span>':''}<span class="bar"></span></div>`;
+      }
+      const sid=t.id+'.'+i, done=!!state.steps[sid];
+      const code=s.code?`<div class="codeblock"><button class="copy" data-code="${esc(s.code)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>copy</button><pre>${esc(s.code)}</pre></div>`:'';
+      stepsHtml+=`<div class="step${done?' done':''}" data-step="${sid}">
+        <input type="checkbox" class="check" ${done?'checked':''} aria-label="Step ${i+1} done" data-sid="${sid}"/>
+        <div class="body">
+          <span class="s-idx">STEP ${i+1}${t.steps.filter(x=>x.part===s.part).length&&s.part?'':''}</span>${s.optional?'<span class="opt-tag">optional</span>':''}
+          <p class="action">${fmt(s.action)}</p>
+          ${code}
+          <div class="expect"><span class="ek">Expected</span>${fmt(s.expect)}</div>
+        </div></div>`;
+    });
+    const result=state.results[t.id]||'';
+    const segBtn=(val,label)=>`<button data-v="${val}" class="${result===val?'on':''}"><span class="d"></span>${label}</button>`;
+    const fbHtml=t.feedback.map((q,i)=>fbItem(t.id,i,q)).join('');
+    const prereq=(t.prereqs&&t.prereqs.length)?`<details class="prereq"><summary><svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>Before you start (${t.prereqs.length})</summary><ul>${t.prereqs.map(p=>`<li>${fmt(p)}</li>`).join('')}</ul></details>`:'';
+
+    v.innerHTML=`
+      <div class="test-head">
+        <span class="id-chip">${t.id}</span>
+        <div style="flex:1;min-width:0">
+          <div class="eyebrow">Test case · ${esc(t.tier)} tier</div>
+          <h1 class="title">${esc(t.title)}</h1>
+          <div class="test-meta">
+            <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>~${t.estMin} min</span>
+            <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg><span data-stepcount="${t.id}">${testStepsDone(t)} / ${t.steps.length} steps</span></span>
+            <span class="pill tier">${esc(t.tier)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="callout">
+        <div class="co"><span class="k">What you're checking</span><p>${fmt(t.whatChecking)}</p></div>
+        <div class="co why"><span class="k">Why it matters</span><p>${fmt(t.whyMatters)}</p></div>
+      </div>
+      ${prereq}
+      <h2 class="section-h">Steps <span class="n">${t.steps.length}</span></h2>
+      <div class="steps">${stepsHtml}</div>
+      <h2 class="section-h">Your verdict</h2>
+      <div class="resultcard">
+        <p class="field-lbl">How did this test go?</p>
+        <div class="seg" data-result="${t.id}">${segBtn('pass','Pass')}${segBtn('partial','Partly')}${segBtn('fail','Fail')}</div>
+        <p class="field-lbl" style="margin-top:18px">Notes (anything odd?)</p>
+        <textarea data-note="${t.id}" placeholder="Bugs, confusing labels, slow moments, anything worth flagging…">${esc(state.notes[t.id]||'')}</textarea>
+      </div>
+      <h2 class="section-h">Your feedback <span class="n">${t.feedback.length}</span></h2>
+      <div class="fb">${fbHtml}</div>
+      <div class="pager">
+        ${prev?`<button class="btn" data-go="${prev.id}"><span class="sub">← Previous</span>${esc(prev.id)}</button>`:`<button class="btn" data-go="home"><span class="sub">←</span>Start here</button>`}
+        ${next?`<button class="btn next primary" data-go="${next.id}"><span class="sub">Next →</span>${esc(next.id)}</button>`:`<button class="btn next primary" data-go="wrap"><span class="sub">Finish →</span>Wrap-up</button>`}
+      </div>`;
+    wireTest(t);
+  }
+
+  function fbItem(tid,i,q){
+    const fid=tid+'.'+i, val=state.feedback[fid];
+    let ctrl='';
+    if(q.kind==='rating'){
+      let btns=''; for(let n=1;n<=5;n++) btns+=`<button data-r="${n}" class="${val&&val.rating==n?'on':''}">${n}</button>`;
+      ctrl=`<div class="rating" data-fb="${fid}" data-kind="rating">${btns}</div>`;
+    } else if(q.kind==='yesno'){
+      ctrl=`<div class="yesno" data-fb="${fid}" data-kind="yesno">
+        <button data-v="yes" class="${val&&val.yn==='yes'?'on':''}">Yes</button>
+        <button data-v="no" class="${val&&val.yn==='no'?'on':''}">No</button></div>
+        <textarea data-fbnote="${fid}" placeholder="Add detail (optional)…">${esc(val&&val.note||'')}</textarea>`;
+    } else {
+      ctrl=`<textarea data-fbtext="${fid}" placeholder="Your answer…">${esc(val&&val.text||'')}</textarea>`;
+    }
+    const scale=q.scale?`<p class="fb-scale">${esc(q.scale)}</p>`:'';
+    return `<div class="fb-item"><p class="fb-q"><span class="qn">Q${i+1}</span>${fmt(q.question)}</p>${scale}${ctrl}</div>`;
+  }
+
+  function renderWrap(v){
+    const fb=INTRO.wrap.map((q,i)=>fbItem('WRAP',i,q)).join('');
+    const done=stepsDone(), pct=totalSteps?Math.round(done/totalSteps*100):0;
+    const verdicts=TESTS.map(t=>{const r=state.results[t.id]; const cls=r||'none';
+      const lbl=r?({pass:'Pass',partial:'Partly',fail:'Fail'})[r]:'—';
+      return `<div class="pill" style="border-color:var(--line)"><span class="dot ${r||''}"></span><b style="font-family:var(--mono);font-weight:600;margin-right:2px">${t.id}</b> ${lbl}</div>`;}).join('');
+    v.innerHTML=`
+      <div class="eyebrow">Final</div>
+      <h1 class="title">Wrap-up</h1>
+      <p class="lede">${esc(done)} of ${esc(totalSteps)} steps cleared (${pct}%). A few questions about the feature as a whole, then export your results.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">${verdicts}</div>
+      <h2 class="section-h">Overall feedback <span class="n">${INTRO.wrap.length}</span></h2>
+      <div class="fb">${fb}</div>
+      <div class="start-row"><button class="btn primary" id="wrapExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Export results</button>
+        <button class="btn" id="resetBtn">Reset everything</button></div>`;
+    wireFb(v);
+    $('#wrapExport').onclick=openExport;
+    $('#resetBtn').onclick=()=>{ if(confirm('Clear all progress, verdicts, and feedback? This cannot be undone.')){ state={steps:{},results:{},notes:{},feedback:{}}; localStorage.removeItem(KEY); go('home'); updateProgress(); } };
+  }
+
+  /* ---------- wiring ---------- */
+  function wireTest(t){
+    $('#view').querySelectorAll('.check').forEach(cb=>cb.addEventListener('change',e=>{
+      const sid=e.target.dataset.sid; state.steps[sid]=e.target.checked;
+      e.target.closest('.step').classList.toggle('done',e.target.checked);
+      const sc=$('#view').querySelector(`[data-stepcount="${t.id}"]`); if(sc) sc.textContent=testStepsDone(t)+' / '+t.steps.length+' steps';
+      save(); updateProgress(); buildNav();
+    }));
+    $('#view').querySelector(`[data-result="${t.id}"]`).querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+      const v=b.dataset.v; state.results[t.id]=(state.results[t.id]===v)?'':v;
+      $('#view').querySelector(`[data-result="${t.id}"]`).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===state.results[t.id]));
+      save(); buildNav();
+    }));
+    const note=$('#view').querySelector(`[data-note="${t.id}"]`);
+    note.addEventListener('input',()=>{state.notes[t.id]=note.value; save();});
+    wireFb($('#view'));
+    $('#view').querySelectorAll('.codeblock .copy').forEach(c=>c.addEventListener('click',()=>{copy(c.dataset.code); toast('Code copied');}));
+    $('#view').querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+  }
+  function wireFb(scope){
+    scope.querySelectorAll('[data-kind="rating"]').forEach(r=>r.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+      const fid=r.dataset.fb, n=+b.dataset.r; state.feedback[fid]=Object.assign({},state.feedback[fid],{rating:(state.feedback[fid]&&state.feedback[fid].rating==n)?null:n});
+      r.querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.r===state.feedback[fid].rating)); save();
+    })));
+    scope.querySelectorAll('[data-kind="yesno"]').forEach(y=>y.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+      const fid=y.dataset.fb, v=b.dataset.v; const cur=state.feedback[fid]||{}; cur.yn=(cur.yn===v)?'':v; state.feedback[fid]=cur;
+      y.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===cur.yn)); save();
+    })));
+    scope.querySelectorAll('[data-fbnote]').forEach(ta=>ta.addEventListener('input',()=>{const fid=ta.dataset.fbnote; state.feedback[fid]=Object.assign({},state.feedback[fid],{note:ta.value}); save();}));
+    scope.querySelectorAll('[data-fbtext]').forEach(ta=>ta.addEventListener('input',()=>{const fid=ta.dataset.fbtext; state.feedback[fid]=Object.assign({},state.feedback[fid],{text:ta.value}); save();}));
+  }
+
+  /* ---------- export ---------- */
+  function buildReport(){
+    const lines=[]; const done=stepsDone(), pct=totalSteps?Math.round(done/totalSteps*100):0;
+    lines.push('# Producer Compliance — UAT Results');
+    lines.push('','**Tester:** Judd  ','**Org:** PSA-Agent (Demo/Mock)  ','**Progress:** '+done+' of '+totalSteps+' steps cleared ('+pct+'%)','');
+    lines.push('| Test | Verdict | Steps | ','|---|---|---|');
+    TESTS.forEach(t=>{const r=state.results[t.id]; lines.push('| '+t.id+' '+t.title.replace(/\|/g,'/')+' | '+(r?({pass:'✅ Pass',partial:'🟠 Partly',fail:'🔴 Fail'})[r]:'—')+' | '+testStepsDone(t)+'/'+t.steps.length+' |');});
+    lines.push('');
+    TESTS.forEach(t=>{
+      lines.push('## '+t.id+': '+t.title);
+      const r=state.results[t.id]; lines.push('**Verdict:** '+(r?({pass:'Pass',partial:'Partly',fail:'Fail'})[r]:'(not set)')+' — '+testStepsDone(t)+'/'+t.steps.length+' steps cleared');
+      if(state.notes[t.id]) lines.push('**Notes:** '+state.notes[t.id]);
+      t.feedback.forEach((q,i)=>{const f=state.feedback[t.id+'.'+i]||{}; let a='(blank)';
+        if(q.kind==='rating') a=f.rating?f.rating+'/5':'(blank)';
+        else if(q.kind==='yesno') a=(f.yn?f.yn.toUpperCase():'(blank)')+(f.note?' — '+f.note:'');
+        else a=f.text||'(blank)';
+        lines.push('- **Q'+(i+1)+'.** '+q.question+'  \n  → '+a);});
+      lines.push('');
+    });
+    lines.push('## Overall wrap-up');
+    INTRO.wrap.forEach((q,i)=>{const f=state.feedback['WRAP.'+i]||{}; let a='(blank)';
+      if(q.kind==='rating') a=f.rating?f.rating+'/5':'(blank)'; else a=f.text||'(blank)';
+      lines.push('- **'+q.question+'**  \n  → '+a);});
+    return lines.join('\n');
+  }
+  function openExport(){ $('#reportText').textContent=buildReport(); $('#modal').classList.add('show'); }
+  function download(name,text,type){const b=new Blob([text],{type}); const u=URL.createObjectURL(b); const a=el('a'); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500);}
+
+  /* ---------- helpers ---------- */
+  let toastT;
+  function toast(msg){const t=$('#toast'); $('#toastMsg').textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1400);}
+  function copy(text){ if(navigator.clipboard) navigator.clipboard.writeText(text).catch(()=>{}); else {const ta=el('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove();} }
+  function closeRail(){$('#rail').classList.remove('open');}
+
+  /* ---------- global wiring ---------- */
+  // delegate so dynamically-rebuilt test nav items (TC1..TC8) stay clickable across re-renders
+  $('#rail').addEventListener('click',e=>{const n=e.target.closest('.nav-item[data-nav]'); if(n) go(n.dataset.nav);});
+  $('#menuBtn').onclick=()=>$('#rail').classList.toggle('open');
+  $('#exportBtn').onclick=openExport;
+  $('#modalClose').onclick=()=>$('#modal').classList.remove('show');
+  $('#modal').addEventListener('click',e=>{if(e.target===$('#modal'))$('#modal').classList.remove('show');});
+  $('#copyReport').onclick=()=>{copy(buildReport()); toast('Report copied');};
+  $('#dlMd').onclick=()=>download('uat-results.md',buildReport(),'text/markdown');
+  $('#dlJson').onclick=()=>download('uat-results.json',JSON.stringify(state,null,2),'application/json');
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').classList.remove('show');});
+
+  buildNav(); updateProgress(); render();
+})();
+</script>
+</body>
+</html>
