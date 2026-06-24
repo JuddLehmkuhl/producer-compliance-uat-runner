@@ -356,7 +356,8 @@ textarea{min-height:74px;line-height:1.5}
     <footer>
       <button class="btn" id="copyReport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Copy</button>
       <button class="btn" id="dlJson">Download .json</button>
-      <button class="btn primary" id="dlMd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Download .md</button>
+      <button class="btn" id="dlMd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Download .md</button>
+      <button class="btn primary" id="submitTeam" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Submit to team</button>
     </footer>
   </div>
 </div>
@@ -1336,15 +1337,29 @@ textarea{min-height:74px;line-height:1.5}
   const INTRO = JSON.parse(document.getElementById('intro-data').textContent);
   const TESTS = JSON.parse(document.getElementById('test-data').textContent);
   const KEY = 'pc-uat-runner-v1';
+  const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbyyQ9WxnfniY1nOVrVARkXAn9BFzeSV43-oYTpFJpmLI-94zsa-Z-e5t2uJ0DPv8tVlZg/exec'; // Apps Script web-app → Google Sheet (central results)
   const $ = (s,r=document)=>r.querySelector(s);
   const el = (t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
   const esc = s => String(s==null?'':s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 
   // load/save state
-  let state = {steps:{},results:{},notes:{},feedback:{}};
+  let state = {steps:{},results:{},notes:{},feedback:{},tester:'',sid:''};
   try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&typeof s==='object') state=Object.assign(state,s);}catch(e){}
-  let saveT;
-  function save(){clearTimeout(saveT); saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} toast('Saved');},250);}
+  if(!state.sid) state.sid = 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  let saveT, subT;
+  function save(){clearTimeout(saveT); saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} toast('Saved'); autoSubmit();},250);}
+
+  /* ---------- central results capture (no backend; posts to a Google Sheet via Apps Script) ---------- */
+  function submitEnabled(){ return !!SUBMIT_URL; }
+  function payload(){
+    const done=stepsDone(), pct=totalSteps?Math.round(done/totalSteps*100):0;
+    const verdicts=TESTS.map(t=>t.id+':'+(state.results[t.id]||'-')).join(' ');
+    return {sid:state.sid, tester:state.tester||'(unnamed)', progress:pct+'% ('+done+'/'+totalSteps+')', verdicts, state, ts:new Date().toISOString()};
+  }
+  function postResults(){ if(!submitEnabled()) return Promise.resolve();
+    return fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload())}).catch(()=>{}); }
+  function autoSubmit(){ if(!submitEnabled()||!state.tester) return; clearTimeout(subT); subT=setTimeout(postResults,3500); }
+  function submitNow(){ if(!submitEnabled()) return; if(!state.tester){ toast('Enter your name on the Start page first'); go('home'); return;} postResults(); toast('Sent to the team ✓'); }
 
   const totalSteps = TESTS.reduce((n,t)=>n+t.steps.length,0);
   const stepsDone = ()=>Object.values(state.steps).filter(Boolean).length;
@@ -1428,6 +1443,10 @@ textarea{min-height:74px;line-height:1.5}
           <span class="rag-chip"><i style="background:var(--green-dot)"></i>Green — cleared</span>
         </div>
       </div>
+      <div class="card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:18px">
+        <div style="flex:1;min-width:200px"><h3 style="margin-bottom:4px">Testing as</h3><p>${submitEnabled()?'Your name labels your results so the team can tell whose is whose — your progress posts to the shared results sheet automatically as you go.':'Your name labels your exported report.'}</p></div>
+        <input class="txtin" id="testerName" style="max-width:280px;height:46px" placeholder="Your name" value="${esc(state.tester||'')}" autocomplete="off" />
+      </div>
       <div class="home-grid">
         <div class="card"><h3>What you're testing</h3><p>${INTRO.what}</p></div>
         <div class="card"><h3>Your access (solo)</h3><p>${INTRO.access}</p></div>
@@ -1439,6 +1458,7 @@ textarea{min-height:74px;line-height:1.5}
       <details class="gloss"><summary>Mini-glossary <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary><div class="gloss-body">${g}</div></details>
       <div class="start-row"><button class="btn primary" id="startBtn">Start TC1 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>`;
     $('#startBtn').onclick=()=>go(TESTS[0].id);
+    const tn=$('#testerName'); if(tn) tn.addEventListener('input',e=>{state.tester=e.target.value.trim(); save();});
   }
 
   function renderTest(v,t){
@@ -1576,7 +1596,7 @@ textarea{min-height:74px;line-height:1.5}
   function buildReport(){
     const lines=[]; const done=stepsDone(), pct=totalSteps?Math.round(done/totalSteps*100):0;
     lines.push('# Producer Compliance — UAT Results');
-    lines.push('','**Tester:** Judd  ','**Org:** PSA-Agent (Demo/Mock)  ','**Progress:** '+done+' of '+totalSteps+' steps cleared ('+pct+'%)','');
+    lines.push('','**Tester:** '+(state.tester||'(unnamed)')+'  ','**Org:** PSA-Agent (Demo/Mock)  ','**Progress:** '+done+' of '+totalSteps+' steps cleared ('+pct+'%)','');
     lines.push('| Test | Verdict | Steps | ','|---|---|---|');
     TESTS.forEach(t=>{const r=state.results[t.id]; lines.push('| '+t.id+' '+t.title.replace(/\|/g,'/')+' | '+(r?({pass:'✅ Pass',partial:'🟠 Partly',fail:'🔴 Fail'})[r]:'—')+' | '+testStepsDone(t)+'/'+t.steps.length+' |');});
     lines.push('');
@@ -1616,6 +1636,8 @@ textarea{min-height:74px;line-height:1.5}
   $('#copyReport').onclick=()=>{copy(buildReport()); toast('Report copied');};
   $('#dlMd').onclick=()=>download('uat-results.md',buildReport(),'text/markdown');
   $('#dlJson').onclick=()=>download('uat-results.json',JSON.stringify(state,null,2),'application/json');
+  if(submitEnabled()){ const st=$('#submitTeam'); st.style.display=''; st.onclick=submitNow;
+    $('#modal').querySelector('.mbody p').textContent='Your results post to the shared team sheet automatically as you go. Hit “Submit to team” to send the latest right now, or download/copy a copy for yourself.'; }
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').classList.remove('show');});
 
   buildNav(); updateProgress(); render();
