@@ -67,6 +67,9 @@ button{font-family:inherit}
 .verdict .ring{width:30px;height:30px;flex:none}
 .verdict b{font-family:var(--mono);font-weight:600;color:#fff;font-size:13px}
 .verdict .lbl{color:#9aa4bd}
+.syncbadge{font-size:12px;font-weight:600;color:var(--green-dot);background:rgba(31,157,85,.12);border:1px solid rgba(31,157,85,.3);padding:5px 11px;border-radius:999px;opacity:0;transform:translateY(-2px);transition:opacity .25s,transform .25s;white-space:nowrap}
+.syncbadge.on{opacity:1;transform:none}
+@media(max-width:880px){.syncbadge{display:none}}
 .tb-btn{
   display:inline-flex;align-items:center;gap:7px; height:34px; padding:0 14px;
   border-radius:9px; border:1px solid #2c3a55; background:#1d293f; color:#e7ebf3;
@@ -308,6 +311,7 @@ textarea{min-height:74px;line-height:1.5}
     </button>
     <div class="brand"><span class="mark"></span><div><b>Producer Compliance</b> <span>UAT Runner</span></div></div>
     <div class="spacer"></div>
+    <span class="syncbadge" id="syncBadge" aria-live="polite"></span>
     <div class="verdict" id="verdict" title="Overall progress">
       <svg class="ring" id="vRing" viewBox="0 0 36 36"></svg>
       <div><b id="vPct">0%</b> <span class="lbl" id="vLbl">not started</span></div>
@@ -1358,8 +1362,11 @@ textarea{min-height:74px;line-height:1.5}
   }
   function postResults(){ if(!submitEnabled()) return Promise.resolve();
     return fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload())}).catch(()=>{}); }
-  function autoSubmit(){ if(!submitEnabled()||!state.tester) return; clearTimeout(subT); subT=setTimeout(postResults,3500); }
-  function submitNow(){ if(!submitEnabled()) return; if(!state.tester){ toast('Enter your name on the Start page first'); go('home'); return;} postResults(); toast('Sent to the team ✓'); }
+  function hasProgress(){ return Object.values(state.steps||{}).some(Boolean) || Object.keys(state.results||{}).length>0 || Object.values(state.notes||{}).some(v=>v&&String(v).trim()) || Object.keys(state.feedback||{}).length>0; }
+  // capture ALWAYS once submission is enabled — even before a name is entered (unnamed rows are keyed by sid and get the name later)
+  function autoSubmit(){ if(!submitEnabled()) return; clearTimeout(subT); subT=setTimeout(()=>{ postResults(); syncBadge(); },2500); }
+  function submitNow(){ if(!submitEnabled()) return; postResults(); syncBadge(); toast(state.tester?'Sent to the team ✓':'Captured ✓ — add your name on the Start page so we know it’s you'); }
+  let syncT; function syncBadge(){ const b=$('#syncBadge'); if(!b) return; b.textContent='✓ saved to team'; b.classList.add('on'); clearTimeout(syncT); syncT=setTimeout(()=>b.classList.remove('on'),1800); }
 
   const totalSteps = TESTS.reduce((n,t)=>n+t.steps.length,0);
   const stepsDone = ()=>Object.values(state.steps).filter(Boolean).length;
@@ -1641,6 +1648,9 @@ textarea{min-height:74px;line-height:1.5}
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').classList.remove('show');});
 
   buildNav(); updateProgress(); render();
+  // on load: if this browser already has progress, capture it now — covers testers who worked
+  // before central capture was enabled, or who never entered a name (so auto-submit had been skipped)
+  if(submitEnabled() && hasProgress()){ postResults(); setTimeout(syncBadge,300); }
 })();
 </script>
 </body>
