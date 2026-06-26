@@ -150,6 +150,11 @@ h1.title{font-family:var(--display);font-weight:700;font-size:clamp(26px,4vw,38p
 .card ul{margin:8px 0 0;padding-left:18px;color:var(--ink-soft);font-size:14px}
 .card ul li{margin:4px 0}
 .mono-tag{font-family:var(--mono);font-size:.9em;background:#eef0f4;padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+.sd-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+.sd-table th{text-align:left;font-family:var(--display);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+.sd-table td{padding:9px 10px;border-bottom:1px solid var(--line);color:var(--ink-soft);vertical-align:top;line-height:1.45}
+.sd-table tbody tr:last-child td{border-bottom:none}
+.sd-table td b{color:var(--ink)}
 
 details.gloss{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
 details.gloss>summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:var(--display);font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px}
@@ -373,6 +378,17 @@ textarea{min-height:74px;line-height:1.5}
   "subtitle":"A guided, self-saving walkthrough of the producer-compliance feature in the PSA-Agent practice org. Work top to bottom, check off each step, set a verdict, and leave feedback. Everything saves to this browser automatically.",
   "what":"This app helps an insurance agency stay compliant. It answers two questions: <b>can this producer sell in this state right now?</b> (a Red / Amber / Green readiness verdict) and <b>can this surplus-lines placement be filed?</b> (a 3-gate “Fileable” verdict). Around that sit the safety rails: maker/checker sign-off, a tamper-proof audit, a nightly sweep, and AI copilots.",
   "access":"You're testing solo with <b>both</b> the Maker and Checker roles plus Agent Admin, and the org has <span class='mono-tag'>Demo Self-Approval</span> ON — so you draft, approve, and file everything yourself. One test (TC7) briefly turns that switch off to prove the separation-of-duties block, then back on.",
+  "sampleData":{
+    "works":[
+      {"producer":"✅ DEMO — Ready to Appoint (VA)","npn":"90000010","state":"VA","carrier":"Allstate Ins Co (CoCode 19232) — or pick \"Other\" and type any name/code","loa":"Property, Casualty, or Life","why":"Purpose-built happy path: active VA license + active lines of authority, and VA files through the NIPR Gateway. Draft → approve → submit completes cleanly."},
+      {"producer":"Laree Hauman","npn":"21957054","state":"Any of ~40 states (VA, NC, GA, AZ…) — just not MD","carrier":"any (or \"Other\")","loa":"varies by state","why":"Licensed and active in ~40 states. Pick any non-Maryland state and the LOA list fills in."},
+      {"producer":"Marcus Reed (SIM)","npn":"90000003","state":"VA","carrier":"any (or \"Other\")","loa":"Property","why":"Already Green / ready-to-sell with an active VA license."}
+    ],
+    "errors":[
+      {"scenario":"“No active license in {state}” — Draft button stays grey","producer":"NPN 7008765 (licensed only in WV)","steps":"Draft a State Filing → Type = Appointment → State = Maryland","result":"The Line-of-Authority list is empty and Draft stays disabled, with guidance to pick a state the producer is licensed in. This is expected — the producer isn't licensed in MD, so there's nothing to appoint.","fix":"Switch State to WV (where NPN 7008765 is licensed) and the LOA list fills in — then you can draft."},
+      {"scenario":"“Can’t file through NIPR” — Maryland Gateway block at Submit","producer":"Marcus Reed (SIM), NPN 90000003 (licensed in MD)","steps":"Draft a Maryland appointment → approve it → Approval Queue → Submit to NIPR","result":"A calm warning toast (not a red error): Maryland appointments can’t be filed through the NIPR Gateway (only Motor Club Rep, class 322). Nothing is submitted; file on paper with the Maryland Insurance Administration. This is expected — Maryland is paper-only for appointments.","fix":"Use any state other than Maryland (e.g. VA) and the same appointment submits through NIPR successfully."}
+    ]
+  },
   "glossary":[
     ["Producer","A licensed insurance salesperson."],
     ["NPN","National Producer Number — a producer's license ID."],
@@ -518,35 +534,35 @@ textarea{min-height:74px;line-height:1.5}
       "The org should be in DEMO mode. Click the \"Control Panel\" tab. Confirm \"Live NIPR Mode (vs Demo/Mock)\" is toggled OFF. Confirm \"Live NIPR Filing\" is toggled ON. The \"Effective State\" card's \"Live filing\" row should show ON.",
       "On the same \"Control Panel\" page, confirm \"Demo Self-Approval (Mock Mode Only)\" is toggled ON.",
       "At least one Agency (Account) record should already exist. If none exist, use the App Launcher to open \"Accounts\", click \"New\", enter any agency name, and click \"Save\".",
-      "You need at least 2 NPNs to import. In demo mode, any 7-digit numbers work (e.g. 7001234 and 7005678).",
+      "Producers are loaded through the new \"Bulk Import Producers\" wizard. For this test use the synthetic agency \"UAT — Bulk Import Test Agency\" and the made-up sample NPNs (e.g. 7395020 and 7395021). They import fine but will NOT verify against NIPR (verify is a live call to NIPR Beta), so the verify/readiness part of this test uses the real seeded producer \"Laree Hauman\" (NPN 21957054). For the full file-upload + AI column-mapping walkthrough, see TC9.",
       "At least one carrier should be seeded so the \"Carrier\" dropdown has an option when you draft a filing. If empty at step 7, choose \"Other (enter manually)...\" and type any carrier name and code (e.g. name: \"Test Carrier\", code: \"12345\").",
       "At least one state should be configured so the \"State\" dropdown has an option (e.g. VA). If no states appear at step 7, ask Judd to load reference data."
     ],
     "steps": [
       {
         "action": "Open the Producer Compliance app. Click the \"Bulk Import Producers\" tab in the top navigation bar.",
-        "expect": "A card titled \"Bulk Import Producers\" with subtitle \"Load producers into an agency's book by NPN\". Below the subtitle: an \"Agency (Account)\" picker, an \"NPNs\" text area, and a grayed-out \"Import roster\" button. A \"Clear\" button is next to it.",
+        "expect": "A 4-step wizard opens with a progress indicator: \"Agency\", \"Add producers\", \"Review\", \"Done\". Step 1 (\"Which agency are these producers affiliated with?\") shows an \"Agency\" picker with the helper text \"Only agency accounts are shown.\"",
         "part": "",
         "optional": false,
         "code": ""
       },
       {
-        "action": "Click inside the \"Agency (Account)\" picker and start typing the name of an agency. Select it from the dropdown. In the \"NPNs\" text area, type at least 2 NPNs, each on its own line (e.g. 7001234, Enter, 7005678). The \"Import roster\" button should turn blue. Click \"Import roster\".",
-        "expect": "A brief spinner appears. A success toast titled \"Roster import\" appears. A shaded result box shows counts: \"Created: N\", \"Matched: N\", \"New affiliations: N\", \"Skipped: N\" -- Created is at least 1 and New affiliations is at least 1. Below the counts: \"New producers import as 'Not yet verified' -- re-verify them against NIPR to baseline their readiness.\"",
+        "action": "In the \"Agency\" picker choose \"UAT — Bulk Import Test Agency\" and click \"Next: Add producers\". On the \"Add producers\" step click \"▸ Just have a few NPNs? Paste them instead\", paste at least 2 sample NPNs (one per line, e.g. 7395020 and 7395021), and click \"Continue with pasted list\". On the \"Review\" step leave the rows ticked, click \"Review & import 2 producers\", then \"Confirm import\".",
+        "expect": "The wizard recognizes a bare NPN list and skips column-mapping, showing both rows as \"New\". After \"Confirm import\" you land on \"Done\" with a success toast \"Import complete\" and a one-line result like \"2 new, 0 matched, 0 enriched, 2 affiliations, 0 skipped.\" plus the note \"New producers are marked 'Not yet verified.'\"",
         "part": "",
         "optional": false,
         "code": ""
       },
       {
-        "action": "Without clearing the form, click \"Import roster\" again with the same NPNs and agency still selected.",
-        "expect": "The toast appears again, but this time \"Created\" shows 0 and \"Matched\" shows the number of producers you already imported. \"New affiliations\" shows 0. This proves the system does not create duplicates on re-import.",
+        "action": "Prove there are no duplicates: on the \"Done\" step click \"Import another file\", pick the same agency, paste the SAME NPNs via \"▸ Just have a few NPNs?\", and confirm the import again.",
+        "expect": "This time every row shows \"Already on roster\", and the \"Done\" result reads \"0 new, 2 matched, 0 enriched, 0 affiliations, 0 skipped\" -- proving the importer is idempotent and creates no duplicates.",
         "part": "",
         "optional": false,
         "code": ""
       },
       {
-        "action": "Click the \"Producers\" tab in the top navigation bar. In the list view, find one of the producers you just imported and click their name to open their record.",
-        "expect": "The producer's record page loads. A card titled \"NIPR Producer Verification\" shows a badge reading \"Not Verified\" and the text \"Click 'Verify with NIPR' to pull live PDB data.\" No license or LOA counts are shown yet.",
+        "action": "Click the \"Producers\" tab. The readiness lifecycle needs a real, verifiable producer, so open \"Laree Hauman\" (NPN 21957054) -- a real NIPR Beta producer seeded for this test. (The sample NPNs you just imported are made-up and won't verify against the live NIPR Beta PDB -- that's expected.)",
+        "expect": "Laree's record opens. The \"NIPR Producer Verification\" card may already read Amber from earlier seeding, or show \"Not Verified\" with \"Click 'Verify with NIPR' to pull live PDB data.\" -- either is fine; you'll (re)verify in the next step.",
         "part": "",
         "optional": false,
         "code": ""
@@ -1330,6 +1346,125 @@ textarea{min-height:74px;line-height:1.5}
         "scale": ""
       }
     ]
+  },
+  {
+    "id": "TC9",
+    "title": "Bulk Import Producers — the New Upload + AI-Mapping Wizard",
+    "estMin": 12,
+    "tier": "Core",
+    "whatChecking": "You'll run a real agency spreadsheet end-to-end through the redesigned 4-step import wizard: pick the agency, drop an Excel file, confirm the AI column mapping, review per-row dispositions, exclude a row, confirm, and verify the results in the data — including the tamper-proof import audit. This replaces the old paste-only import box.",
+    "whyMatters": "Agencies hand you messy spreadsheets with their own column names. The wizard has to read them, map columns correctly, dedupe against existing producers, refuse bad rows, and leave an immutable audit — without anyone hand-typing NPNs. It's the feature most testers will touch first.",
+    "prereqs": [
+      "The org should be in DEMO mode — Control Panel tab, \"Live NIPR Mode (vs Demo/Mock)\" toggled OFF.",
+      "Download the sample file: [agency-roster-rich.xlsx](https://juddlehmkuhl.github.io/producer-compliance-uat-runner/agency-roster-rich.xlsx). Prefer CSV? The identical [agency-roster-rich.csv](https://juddlehmkuhl.github.io/producer-compliance-uat-runner/agency-roster-rich.csv) imports the same way.",
+      "Use the agency \"UAT — Bulk Import Test Agency\" — it starts empty. If rows show \"Already on roster\", a teammate already ran this file; read the counts relative to what's there, or reset per the sample-data README.",
+      "AI column mapping is live (the \"OB_Producer_Import_Map\" prompt template is active). If the mapping step errors, flag it in your notes."
+    ],
+    "steps": [
+      {
+        "action": "Open the Producer Compliance app and click the \"Bulk Import Producers\" tab.",
+        "expect": "A 4-step wizard with a progress indicator: \"Agency\" → \"Add producers\" → \"Review\" → \"Done\". You're on Step 1 (\"Which agency are these producers affiliated with?\") with an \"Agency\" picker.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Step 1 — Agency: in the picker type \"UAT\" and choose \"UAT — Bulk Import Test Agency\", then click \"Next: Add producers\".",
+        "expect": "Only agency accounts appear in the picker (helper text: \"Only agency accounts are shown.\"). Selecting one enables the \"Next: Add producers\" button; clicking it moves you to Step 2.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Step 2 — Add producers: drag the sample file [agency-roster-rich.xlsx](https://juddlehmkuhl.github.io/producer-compliance-uat-runner/agency-roster-rich.xlsx) onto the drop zone (or click the zone to browse and pick it).",
+        "expect": "The drop zone reads \"Drop your spreadsheet here, or click to browse\" with \"Excel (.xlsx) or CSV — we'll map the columns for you\". After the file lands you see a brief spinner, then the \"Review\" step opens.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Step 3 — Review the mapping: read the \"How we read your file\" table at the top. Each of your columns (Producer #, First, Last, Home State, Type, Email, Notes) shows what it \"Maps to\", a confidence chip, and a sample value.",
+        "expect": "Producer # → NPN, First → First name, Last → Last name, Home State → Resident state, Type → Entity type, Email → Email, and \"Notes\" → \"— Don't import\". Confidence chips read High / Medium / Low.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Prove the mapping is advisory: change the \"Home State\" dropdown to \"— Don't import\", watch the preview, then set it back to \"Resident state\".",
+        "expect": "The preview table re-projects instantly each time — the \"State\" column blanks out when you unmap it and repopulates when you restore it. You're in control of the mapping; the AI only proposes it.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Step 3 — Review the rows: read the \"Status\" and \"Issues\" columns of the preview table.",
+        "expect": "6 rows are \"New\" (one — Oliver Brandt — carries an Issue \"Unrecognized state 'Atlantica' — will be left blank\" but still imports). 2 rows are \"Exists — will affiliate\" (Marcus Reed, Dana Brightwater). 2 rows are \"Invalid NPN — excluded\" (the \"NPN\" and \"N/A\" rows) — these are unticked and can't be selected.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Exclude a row: untick ONE of the \"New\" rows (your choice). Then click the green \"Review & import N producers\" button.",
+        "expect": "The button counts only ticked valid rows — after unticking one it reads \"Review & import 7 producers\". Clicking it shows a green confirm box \"You're importing 7 producer(s)\" with a breakdown like \"5 new · 2 to affiliate · 0 already on roster · 1 excluded by you · 2 invalid · 0 ambiguous\".",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Click \"Confirm import\".",
+        "expect": "You land on Step 4 (\"Done\") with a success toast \"Import complete\" and a one-line result like \"5 new, 2 matched, 0 enriched, 7 affiliations, 2 skipped.\" (If you didn't untick a row it reads \"6 new, 2 matched, 0 enriched, 8 affiliations, 2 skipped.\") Plus the note \"New producers are marked 'Not yet verified.'\"",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Verify the data — names: click the \"Producers\" tab and search for one of the new producers (e.g. \"Castellano\" or \"Okonkwo\").",
+        "expect": "The new producers have REAL names (e.g. \"Ava Castellano\"), NOT \"NPN 7395001\". Ava's \"Resident State\" is \"CA\" (the file said \"California\" — the wizard normalized it). Marcus Reed and Dana Brightwater now list \"UAT — Bulk Import Test Agency\" among their affiliations.",
+        "part": "",
+        "optional": false,
+        "code": ""
+      },
+      {
+        "action": "Verify the data — audit trail (dev step, optional): open Developer Console (gear → Developer Console) → Debug → Open Execute Anonymous Window, paste the snippet below, click Execute, then open the log and read the USER_DEBUG line.",
+        "expect": "Exactly one new \"OB_Producer_Import__c\" audit row was written for your import. Its \"Summary__c\" names the agency, the counts (+6 new / 2 matched / ... / 2 skipped), and your username. This row is append-only — it cannot be edited or deleted (TC7 proves that).",
+        "part": "",
+        "optional": true,
+        "code": "OB_Producer_Import__c r = [SELECT Summary__c, Rows_Created__c, Rows_Matched__c, Rows_Skipped__c, CreatedDate\n  FROM OB_Producer_Import__c ORDER BY CreatedDate DESC LIMIT 1];\nSystem.debug('LATEST IMPORT AUDIT >>> ' + r.Summary__c);"
+      },
+      {
+        "action": "Prove idempotency (optional): on the \"Done\" step click \"Import another file\", repeat Steps 1–3 with the SAME file, and confirm the import again.",
+        "expect": "Every row now shows \"Already on roster\"; the Done result reads \"0 new, 8 matched, 0 enriched, 0 affiliations, 2 skipped.\" No duplicates were created.",
+        "part": "",
+        "optional": true,
+        "code": ""
+      }
+    ],
+    "feedback": [
+      {
+        "kind": "rating",
+        "question": "How accurate was the AI column mapping out of the box, before you changed anything?",
+        "scale": "1 = several columns mapped wrong, 5 = every column mapped correctly"
+      },
+      {
+        "kind": "yesno",
+        "question": "When you unticked a row, did the \"Review & import N\" button and the green confirm summary update to match what you selected? If No, describe what you saw."
+      },
+      {
+        "kind": "rating",
+        "question": "How clear were the per-row dispositions (New / Exists — will affiliate / Invalid — excluded)? Did you understand why each row was classified the way it was?",
+        "scale": "1 = confusing, 5 = totally clear"
+      },
+      {
+        "kind": "text",
+        "question": "After import, did the new producers show real names (e.g. \"Ava Castellano\") rather than \"NPN 7395001\"? Note anything that looked off — wrong state, missing email, etc.",
+        "scale": ""
+      },
+      {
+        "kind": "text",
+        "question": "What was the most confusing or friction-filled moment in the new wizard? Name the specific step, button, or label where you hesitated.",
+        "scale": ""
+      }
+    ]
   }
 ]
 </script>
@@ -1378,6 +1513,9 @@ textarea{min-height:74px;line-height:1.5}
     h = h.replace(/&quot;([^&]*?)&quot;/g,'<span class="uilabel">$1</span>')
          .replace(/"([^"]*?)"/g,'<span class="uilabel">$1</span>')
          .replace(/`([^`]+?)`/g,'<span class="uilabel">$1</span>');
+    // markdown-style download links: [label](https://…) → clickable anchor (for sample-file links)
+    h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+                  '<a href="$2" target="_blank" rel="noopener" style="font-weight:600;text-decoration:underline">$1</a>');
     return h;
   }
 
@@ -1439,6 +1577,21 @@ textarea{min-height:74px;line-height:1.5}
 
   function renderHome(v){
     const g=INTRO.glossary.map(([term,def])=>`<div class="gterm"><b>${esc(term)}</b> — <span>${esc(def)}</span></div>`).join('');
+    const sd=INTRO.sampleData?(()=>{
+      const w=INTRO.sampleData.works.map(r=>`<tr><td><b>${esc(r.producer)}</b><br><span class="mono-tag">NPN ${esc(r.npn)}</span></td><td>${esc(r.state)}</td><td>${esc(r.carrier)}</td><td>${esc(r.loa)}</td><td>${esc(r.why)}</td></tr>`).join('');
+      const e=INTRO.sampleData.errors.map(r=>`<tr><td><b>${esc(r.scenario)}</b></td><td>${esc(r.producer)}</td><td>${esc(r.steps)}</td><td>${esc(r.result)}</td><td>${esc(r.fix)}</td></tr>`).join('');
+      return `
+      <div class="card" style="margin-top:18px">
+        <h3>✅ Sample data that works — a clean appointment with no errors</h3>
+        <p>Use any of these in the <b>Draft a State Filing (Maker)</b> card on the producer's record page. Each has an active license + line of authority in a state that files through the NIPR Gateway, so draft → approve → submit completes cleanly. Carriers are seeded (e.g. Allstate Ins Co, CoCode 19232) or you can pick <b>Other</b> and type any name/code.</p>
+        <div style="overflow-x:auto"><table class="sd-table"><thead><tr><th>Producer</th><th>State</th><th>Carrier</th><th>Line of authority</th><th>Why it works</th></tr></thead><tbody>${w}</tbody></table></div>
+      </div>
+      <div class="card warn" style="margin-top:14px">
+        <h3>⚠ Sample data that triggers the guardrails — these errors are expected</h3>
+        <p>These blocks are <b>intentional business rules, not bugs</b>. The app refuses a filing the state or NIPR would reject and tells you what to do instead. Use this data to see each guardrail, then use the “How to make it succeed” column to clear it.</p>
+        <div style="overflow-x:auto"><table class="sd-table"><thead><tr><th>What you'll see</th><th>Producer</th><th>How to trigger it</th><th>What happens (expected)</th><th>How to make it succeed</th></tr></thead><tbody>${e}</tbody></table></div>
+      </div>`;
+    })():'';
     v.innerHTML=`
       <div class="home-hero">
         <div class="eyebrow">Internal UAT · PSA-Agent practice org</div>
@@ -1462,6 +1615,7 @@ textarea{min-height:74px;line-height:1.5}
         <div class="card warn"><h3>⚠ Practice environment</h3><p>Nothing here is real. Every check is simulated; confirmation numbers start with <span class="mono-tag">MOCK-</span>. If you ever see a confirmation that doesn't, stop and flag it.</p></div>
         <div class="card"><h3>How it works</h3><ul><li>Do tests in order — TC1 first.</li><li>Tick each step as you complete it.</li><li>Set a <b>Pass / Partly / Fail</b> verdict per test.</li><li>Answer the feedback — that's the real signal.</li><li>Hit <b>Export results</b> when done.</li></ul></div>
       </div>
+      ${sd}
       <details class="gloss"><summary>Mini-glossary <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></summary><div class="gloss-body">${g}</div></details>
       <div class="start-row"><button class="btn primary" id="startBtn">Start TC1 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>`;
     $('#startBtn').onclick=()=>go(TESTS[0].id);

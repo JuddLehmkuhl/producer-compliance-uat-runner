@@ -1,0 +1,11 @@
+Producer #,First,Last,Home State,Type,Email,Notes
+7395001,Ava,Castellano,California,Individual,ava.castellano@example.com,Top producer 2025
+7395002,Liam,Okonkwo,TX,Individual,liam.okonkwo@example.com,New hire Q1
+7395003,Noah,Delacroix,New York,Individual,noah.delacroix@example.com,Commercial lines
+7395004,Maya,Fairbanks,FL,Individual,maya.fairbanks@example.com,Personal lines
+7395005,Elena,Vasquez,Georgia,Individual,elena.vasquez@example.com,Referral partner
+7395006,Oliver,Brandt,Atlantica,Individual,oliver.brandt@example.com,Region TBD
+90000003,Marcus,Reed,MD,Individual,,Existing producer - should match & affiliate
+90000001,Dana,Brightwater,MD,Individual,,Existing producer - should match & affiliate
+NPN,First,Last,Home State,Type,,Stray duplicate header row pasted by mistake
+N/A,Pending,Hire,TX,Individual,,Awaiting NPN from carrier
