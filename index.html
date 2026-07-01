@@ -387,6 +387,23 @@ textarea{min-height:74px;line-height:1.5}
     "errors":[
       {"scenario":"“No active license in {state}” — Draft button stays grey","producer":"NPN 7008765 (licensed only in WV)","steps":"Draft a State Filing → Type = Appointment → State = Maryland","result":"The Line-of-Authority list is empty and Draft stays disabled, with guidance to pick a state the producer is licensed in. This is expected — the producer isn't licensed in MD, so there's nothing to appoint.","fix":"Switch State to WV (where NPN 7008765 is licensed) and the LOA list fills in — then you can draft."},
       {"scenario":"“Can’t file through NIPR” — Maryland Gateway block at Submit","producer":"Marcus Reed (SIM), NPN 90000003 (licensed in MD)","steps":"Draft a Maryland appointment → approve it → Approval Queue → Submit to NIPR","result":"A calm warning toast (not a red error): Maryland appointments can’t be filed through the NIPR Gateway (only Motor Club Rep, class 322). Nothing is submitted; file on paper with the Maryland Insurance Administration. This is expected — Maryland is paper-only for appointments.","fix":"Use any state other than Maryland (e.g. VA) and the same appointment submits through NIPR successfully."}
+    ],
+    "readiness":[
+      {"producer":"🟢 DEMO — Green: Appointed (VA)","npn":"90000030","badge":"🟢 Green","detail":"Active VA license + LOA + active E&O + an active VA carrier appointment → the standard Ready-to-Sell path."},
+      {"producer":"✅ DEMO — SL Exempt Ready (FL)","npn":"90000021","badge":"🟢 Green","detail":"FL surplus-lines license + LOA + active E&O. Florida is appointment-exempt for surplus lines → Ready to Sell with NO carrier appointment. (TC4 Green case)"},
+      {"producer":"🟢 DEMO — Green: Multi-State Appointed","npn":"90000031","badge":"🟢 Green","detail":"Appointed and ready in TWO states (VA and NC)."},
+      {"producer":"🟠 DEMO — Appointment Required (MD)","npn":"90000022","badge":"🟠 Amber","detail":"Admitted MD license + active E&O but no appointment and MD isn't exempt → “appointment required.” The TC4 contrast to NPN 90000021."},
+      {"producer":"🟠 DEMO — Amber: E&O Missing (VA)","npn":"90000032","badge":"🟠 Amber","detail":"Licensed and appointed in VA, but no active E&O policy → not yet Ready to Sell."},
+      {"producer":"🟠 DEMO — Amber: Contracting Open (VA)","npn":"90000033","badge":"🟠 Amber","detail":"Fully licensed/appointed with E&O, but an open blocking contracting requirement (AML Training) holds it at Amber."},
+      {"producer":"🟠 DEMO — Amber: Appt LOA Mismatch (VA)","npn":"90000038","badge":"🟠 Amber","detail":"Appointed for “Life” but only licensed for Property → the appointment doesn't match a licensed line of authority."},
+      {"producer":"🔴 DEMO — Red: Regulatory Action (VA)","npn":"90000035","badge":"🔴 Red","detail":"A blocking regulatory action (revocation) blocks readiness globally, even though the producer is licensed and appointed."},
+      {"producer":"🔴 DEMO — Red: License Expired (VA)","npn":"90000036","badge":"🔴 Red","detail":"The VA license is past its expiration date → not registry-clear."},
+      {"producer":"🔴 DEMO — Red: CE Non-Compliant (VA)","npn":"90000037","badge":"🔴 Red","detail":"Continuing-education non-compliance quarantines the only licensed state → Red."},
+      {"producer":"🔴 DEMO — Red: Agency No DRLP (VA)","npn":"90000039","badge":"🔴 Red","detail":"An agency with no designated responsible licensed producer (DRLP) on file → agency license at risk."}
+    ],
+    "carriers":[
+      {"name":"DEMO — Non-Admitted / Surplus Lines (Beacon E&S Specialty)","cocode":"99002","type":"Non-admitted (E&S / surplus lines)","use":"TC3 — E&S Placement","detail":"Not state-licensed; writes hard-to-place risk and does NOT appoint producers. Pre-marked Eligible for surplus lines in FL, TX and AZ, so the Carrier Eligibility gate turns green when you re-verify. In TC3, set Home State (NRRA) = FL."},
+      {"name":"DEMO — Admitted Carrier (Northstar Standard Ins Co)","cocode":"99001","type":"Admitted","use":"TC2 — Appointment","detail":"A standard state-licensed carrier. Admitted carriers appoint the producers who sell their policies, so use this one when drafting an Appointment. It has no surplus-lines eligibility because admitted carriers do not need it."}
     ]
   },
   "glossary":[
@@ -394,8 +411,8 @@ textarea{min-height:74px;line-height:1.5}
     ["NPN","National Producer Number — a producer's license ID."],
     ["Appointment","A carrier authorizing a producer to sell its policies in a state."],
     ["LOA","Line of Authority — a category of insurance (Life, Property…)."],
-    ["Admitted carrier","A state-licensed, regulated insurer."],
-    ["Surplus lines / E&S","Non-admitted insurers for hard-to-place risks."],
+    ["Admitted carrier","A state-licensed insurer that appoints the producers who sell its policies (used in appointments — TC2)."],
+    ["Surplus lines / E&S","A non-admitted insurer (NOT state-licensed) for hard-to-place risk; it doesn't appoint producers and must be proven eligible in the state (used in placements — TC3)."],
     ["Diligent search","Documented proof admitted carriers were tried first."],
     ["Affidavit","A signed sworn statement (here, of the diligent search)."],
     ["Stamping office","The state body that records surplus-lines filings."],
@@ -535,7 +552,7 @@ textarea{min-height:74px;line-height:1.5}
       "On the same \"Control Panel\" page, confirm \"Demo Self-Approval (Mock Mode Only)\" is toggled ON.",
       "At least one Agency (Account) record should already exist. If none exist, use the App Launcher to open \"Accounts\", click \"New\", enter any agency name, and click \"Save\".",
       "Producers are loaded through the new \"Bulk Import Producers\" wizard. For this test use the synthetic agency \"UAT — Bulk Import Test Agency\" and the made-up sample NPNs (e.g. 7395020 and 7395021). They import fine but will NOT verify against NIPR (verify is a live call to NIPR Beta), so the verify/readiness part of this test uses the real seeded producer \"Laree Hauman\" (NPN 21957054). For the full file-upload + AI column-mapping walkthrough, see TC9.",
-      "At least one carrier should be seeded so the \"Carrier\" dropdown has an option when you draft a filing. If empty at step 7, choose \"Other (enter manually)...\" and type any carrier name and code (e.g. name: \"Test Carrier\", code: \"12345\").",
+      "For the \"Carrier\" dropdown when you draft the appointment, use the seeded demo record \"DEMO — Admitted Carrier (Northstar Standard Ins Co)\" (NAIC CoCode 99001) — admitted carriers are the ones that appoint producers. Search \"DEMO\" in the dropdown. If for any reason it is not listed, choose \"Other (enter manually)...\" and type any name/code.",
       "At least one state should be configured so the \"State\" dropdown has an option (e.g. VA). If no states appear at step 7, ask Judd to load reference data."
     ],
     "steps": [
@@ -659,10 +676,16 @@ textarea{min-height:74px;line-height:1.5}
     "tier": "Core",
     "whatChecking": "You will create a surplus-lines placement -- a record that represents placing insurance through a non-admitted (surplus lines / E&S) carrier. Then you will walk the placement through the three compliance gates the system requires before it can be officially filed with the state: (1) Carrier Eligibility -- verify the carrier is allowed to write surplus-lines business in that state, (2) Diligent Search -- document that you tried admitted carriers first and they all declined, then sign the affidavit, (3) SL Filing -- draft, approve, and submit the tax and stamping filing to the state stamping office. Along the way, a \"Fileability\" card on the record will climb from 0 of 3 gates cleared to 3 of 3 cleared, ending with a green \"Fileable\" badge.",
     "whyMatters": "If any of these gates is skipped or done out of order in real life, the agency faces regulatory fines, voided policies, and clawed-back commissions. This test proves every gate works and blocks progress until its requirements are met.",
+    "noteTitle": "Admitted vs Non-Admitted carriers — read this first",
+    "note": [
+      "\"Admitted\" carriers are licensed and regulated by the state. Because the state stands behind them, they formally appoint the producers who sell their policies — so anything about appointments (TC2) uses an admitted carrier.",
+      "\"Non-admitted\" carriers (also called \"surplus lines\" or \"E&S\") are NOT licensed in the state. They exist to cover risks the admitted market won't take. They do not appoint producers; instead, before you can place business you must prove two things: (1) the carrier is eligible to write surplus lines in that state, and (2) you did a diligent search of admitted carriers first and they declined. That is exactly the 3-gate flow you are about to walk through.",
+      "For this test, use the seeded carrier \"DEMO — Non-Admitted / Surplus Lines (Beacon E&S Specialty)\" (NAIC CoCode 99002). It is pre-marked eligible for surplus lines in FL, TX and AZ, so the eligibility gate will clear. Pair it with Home State (NRRA) = \"FL\"."
+    ],
     "prereqs": [
       "You should already be logged in to the Producer Compliance app. If not, click the \"App Launcher\" (the waffle/grid icon at the top-left) and type \"Producer Compliance\" into the search box, then click the app name.",
       "You need at least one producer record (an \"OB_Producer__c\" record) in the system. Write down the producer's name so you can find it later.",
-      "You need at least one carrier record (an \"OB_Carrier__c\" record) that represents a non-admitted (surplus-lines) carrier. Write down its name for later.",
+      "For the carrier, use the seeded demo record \"DEMO — Non-Admitted / Surplus Lines (Beacon E&S Specialty)\" (NAIC CoCode 99002). It is a non-admitted (surplus-lines) carrier pre-marked Eligible in FL, TX and AZ, so the Carrier Eligibility gate will clear when you re-verify. Search \"DEMO\" in the Carrier lookup. Do NOT pick \"Test Non Admitted\" — it has no eligibility on file and will stay blocked.",
       "The org should already be in Demo/Mock mode, meaning no real filings will be sent to any state agency.",
       "The Florida (FL) tax preview in steps 15-16 may show a real computed dollar amount OR $0.00 with a red warning -- both are valid depending on what demo data has been loaded. Either is fine for this test.",
       "If Florida has a \"Diligent Search Threshold\" configured (typically 3), you will need to log that many declinations. If no threshold is configured, logging at least one declination is enough."
@@ -683,7 +706,7 @@ textarea{min-height:74px;line-height:1.5}
         "optional": false
       },
       {
-        "action": "Fill in the form with these values, then click \"Save\": Insured Name = \"Acme Widgets LLC\", Home State (NRRA) = \"FL\", Carrier = search for and select your non-admitted carrier, Gross Premium = \"100000\", Effective Date = today's date, Coverage Type = \"General Liability\". Leave all other fields blank.",
+        "action": "Fill in the form with these values, then click \"Save\": Insured Name = \"Acme Widgets LLC\", Home State (NRRA) = \"FL\", Carrier = search \"DEMO\" and select \"DEMO — Non-Admitted / Surplus Lines (Beacon E&S Specialty)\", Gross Premium = \"100000\", Effective Date = today's date, Coverage Type = \"General Liability\". Leave all other fields blank.",
         "expect": "A green success toast appears. The new placement record page opens. The \"Status\" field in the detail section shows \"Draft\".",
         "code": "",
         "part": "",
@@ -830,9 +853,10 @@ textarea{min-height:74px;line-height:1.5}
     "whatChecking": "When a producer holds a surplus-lines license in a state that is marked \"appointment-exempt,\" the system should show a GREEN \"Ready to Sell\" badge even though the producer has no carrier appointment. Meanwhile, the same kind of producer in a normal (admitted) state should still show an AMBER badge saying an appointment is required.",
     "whyMatters": "Surplus-lines carriers (non-admitted/E&S carriers) do not formally appoint producers. If the system wrongly demanded an appointment in a state where one is never issued, it would block legitimate business. At the same time, admitted carriers DO require appointments, so skipping that check would be a dangerous compliance gap. The exemption is controlled by a data record on the \"Filing References\" tab, not by any code change -- proving the system's \"config-as-data\" design works.",
     "prereqs": [
+      "WHO TO SEARCH FOR (already seeded — you don't need to create anything): On the \"Producers\" tab, search the GREEN case → type \"DEMO — SL Exempt\" or NPN \"90000021\" (✅ DEMO — SL Exempt Ready (FL)). Then search the AMBER contrast → type \"DEMO — Appointment Required\" or NPN \"90000022\" (🟠 DEMO — Appointment Required (MD)). These two producers ARE this test: 90000021 should be GREEN with no appointment (surplus-lines exemption); 90000022 should be AMBER (appointment required).",
       "The org is in Demo/Mock mode. Open the Producer Compliance app, click the \"Control Panel\" tab, and confirm \"Live NIPR Mode\" is toggled OFF in the \"Effective State\" card.",
-      "A producer record exists with: (a) an active surplus-lines license (License Class = \"Surplus Lines\", License Class Code = \"SL\") in a test state such as FL, (b) at least one active LOA under that license, (c) an active E&O policy, and (d) NO carrier appointment in that state. Write down the producer's name.",
-      "That same producer (or a different one) also has an active admitted-market license in a DIFFERENT state (e.g. MD), with active E&O but NO carrier appointment and NO \"Appointment Exemption\" reference row for that second state.",
+      "(Already satisfied by the seeded data above — kept for reference) A producer exists with: (a) an active surplus-lines license (License Class = \"Surplus Lines\", License Class Code = \"SL\") in a test state such as FL, (b) at least one active LOA, (c) an active E&O policy, and (d) NO carrier appointment in that state. → this is NPN 90000021.",
+      "(Already satisfied — this is NPN 90000022) A producer with an active admitted-market license in a non-exempt state (MD), active E&O but NO carrier appointment and NO \"Appointment Exemption\" row for MD — so it stays AMBER.",
       "On the \"Filing References\" tab, a record exists with Reference Type = \"Appointment Exemption\", State = the exempt test state (e.g. \"FL\"), License Class Code = \"SL\", and the \"Active\" checkbox checked.",
       "The second test state (e.g. MD) must NOT have an Appointment Exemption row.",
       "If the Appointment Exemption reference row cannot be created, SKIP this entire test and note the reason: \"No Appointment Exemption reference row seeded for the test state.\""
@@ -1580,7 +1604,22 @@ textarea{min-height:74px;line-height:1.5}
     const sd=INTRO.sampleData?(()=>{
       const w=INTRO.sampleData.works.map(r=>`<tr><td><b>${esc(r.producer)}</b><br><span class="mono-tag">NPN ${esc(r.npn)}</span></td><td>${esc(r.state)}</td><td>${esc(r.carrier)}</td><td>${esc(r.loa)}</td><td>${esc(r.why)}</td></tr>`).join('');
       const e=INTRO.sampleData.errors.map(r=>`<tr><td><b>${esc(r.scenario)}</b></td><td>${esc(r.producer)}</td><td>${esc(r.steps)}</td><td>${esc(r.result)}</td><td>${esc(r.fix)}</td></tr>`).join('');
+      const rd=(INTRO.sampleData.readiness||[]).map(r=>`<tr><td><b>${esc(r.producer)}</b></td><td><span class="mono-tag">${esc(r.npn)}</span></td><td>${esc(r.badge)}</td><td>${esc(r.detail)}</td></tr>`).join('');
+      const ca=(INTRO.sampleData.carriers||[]).map(r=>`<tr><td><b>${esc(r.name)}</b></td><td><span class="mono-tag">${esc(r.cocode)}</span></td><td>${esc(r.type)}</td><td>${esc(r.use)}</td><td>${esc(r.detail)}</td></tr>`).join('');
+      const carrierCard = ca ? `
+      <div class="card" style="margin-top:18px">
+        <h3>🏢 Which carrier do I pick? — Admitted vs Non-Admitted</h3>
+        <p><b>Admitted</b> carriers are state-licensed and formally <b>appoint</b> producers → use one for an <b>Appointment</b> (TC2). <b>Non-admitted / surplus-lines (E&amp;S)</b> carriers are <b>not</b> state-licensed, don't appoint producers, and must be proven <b>eligible</b> in the risk state → use one for an <b>E&amp;S Placement</b> (TC3). The org holds 200+ carriers, so to avoid guessing use these two purpose-built demo records — just type <b>DEMO</b> in any Carrier lookup:</p>
+        <div style="overflow-x:auto"><table class="sd-table"><thead><tr><th>Carrier (search "DEMO")</th><th>NAIC CoCode</th><th>Type</th><th>Use it in</th><th>Notes</th></tr></thead><tbody>${ca}</tbody></table></div>
+      </div>` : '';
+      const rdCard = rd ? `
+      <div class="card" style="margin-top:14px">
+        <h3>🧪 Readiness test cast — known Green / Amber / Red producers (TC2, TC4, TC6)</h3>
+        <p>Search any of these by name (type “DEMO —”) or by the NPN. Each is purpose-built to land on a specific readiness badge, so you can test what makes a producer Ready to Sell — or not. The expected badge is in the name and the Badge column.</p>
+        <div style="overflow-x:auto"><table class="sd-table"><thead><tr><th>Producer (search this)</th><th>NPN</th><th>Badge</th><th>What it tests</th></tr></thead><tbody>${rd}</tbody></table></div>
+      </div>` : '';
       return `
+      ${carrierCard}
       <div class="card" style="margin-top:18px">
         <h3>✅ Sample data that works — a clean appointment with no errors</h3>
         <p>Use any of these in the <b>Draft a State Filing (Maker)</b> card on the producer's record page. Each has an active license + line of authority in a state that files through the NIPR Gateway, so draft → approve → submit completes cleanly. Carriers are seeded (e.g. Allstate Ins Co, CoCode 19232) or you can pick <b>Other</b> and type any name/code.</p>
@@ -1590,7 +1629,8 @@ textarea{min-height:74px;line-height:1.5}
         <h3>⚠ Sample data that triggers the guardrails — these errors are expected</h3>
         <p>These blocks are <b>intentional business rules, not bugs</b>. The app refuses a filing the state or NIPR would reject and tells you what to do instead. Use this data to see each guardrail, then use the “How to make it succeed” column to clear it.</p>
         <div style="overflow-x:auto"><table class="sd-table"><thead><tr><th>What you'll see</th><th>Producer</th><th>How to trigger it</th><th>What happens (expected)</th><th>How to make it succeed</th></tr></thead><tbody>${e}</tbody></table></div>
-      </div>`;
+      </div>
+      ${rdCard}`;
     })():'';
     v.innerHTML=`
       <div class="home-hero">
@@ -1664,6 +1704,7 @@ textarea{min-height:74px;line-height:1.5}
         <div class="co"><span class="k">What you're checking</span><p>${fmt(t.whatChecking)}</p></div>
         <div class="co why"><span class="k">Why it matters</span><p>${fmt(t.whyMatters)}</p></div>
       </div>
+      ${t.note?`<div class="card" style="margin:14px 0 0;border-left:4px solid #2f6feb;background:#eef4ff"><h3 style="margin-bottom:6px">📘 ${esc(t.noteTitle||'Key concept')}</h3>${(Array.isArray(t.note)?t.note:[t.note]).map(p=>`<p style="margin:6px 0">${fmt(p)}</p>`).join('')}</div>`:''}
       ${prereq}
       <h2 class="section-h">Steps <span class="n">${t.steps.length}</span></h2>
       <div class="steps">${stepsHtml}</div>
